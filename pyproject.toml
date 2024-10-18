@@ -1,11 +1,17 @@
 [build-system]
 requires = [
-    "setuptools"
+    "maturin"
 ]
+build-backend = "maturin"
+
+[tool.maturin]
+python-source = "pydeeptools"
+module-name = "deeptools.hp"
+bindings = "pyo3"
 
 [project]
 name = "deepTools"
-version = "3.5.6"
+version = "4.0.0"
 authors = [
     {name="Fidel Ramirez"},
     {name="Devon P Ryan"},
@@ -58,6 +64,7 @@ packages = ["deeptools"]
 alignmentSieve = "deeptools.alignmentSieve:main"
 bamCompare = "deeptools.bamCompare:main"
 bamCoverage = "deeptools.bamCoverage:main"
+bamCoverage2 = "deeptools.bamCoverage2:main"
 bamPEFragmentSize = "deeptools.bamPEFragmentSize:main"
 bigwigAverage = "deeptools.bigwigAverage:main"
 bigwigCompare = "deeptools.bigwigCompare:main"
