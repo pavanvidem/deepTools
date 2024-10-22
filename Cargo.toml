@@ -10,4 +10,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = "0.22.0"
-rust-htslib = "*"
+rust-htslib = "0.47.0"
+rayon = "1.10.0"

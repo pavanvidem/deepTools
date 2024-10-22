@@ -130,6 +130,10 @@ def process_args(args=None):
 
 def main(args=None):
     args = process_args(args)
-    test = r_bamcoverage(args.bam, args.outFileName)
-    
-
+    r_bamcoverage(
+       args.bam, # bam file
+       args.outFileName, # output file
+       args.numberOfProcessors, # threads
+       [], # regions
+       True # verbose
+    )
