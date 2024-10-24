@@ -134,6 +134,7 @@ def main(args=None):
        args.bam, # bam file
        args.outFileName, # output file
        args.numberOfProcessors, # threads
+       args.binSize, # bin size
        [], # regions
        True # verbose
     )

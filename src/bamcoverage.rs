@@ -8,8 +8,9 @@ use crate::compute::{bam_pileup, parse_regions};
 #[pyfunction]
 pub fn r_bamcoverage(
     bam_ifile: &str,
-    _bedgraph_ofile: &str,
+    bedgraph_ofile: &str,
     nproc: usize,
+    binsize: u32,
     regions: Vec<(String, u64, u64)>,
     _verbose: bool
 ) -> PyResult<()> {
@@ -18,11 +19,11 @@ pub fn r_bamcoverage(
     let pool = ThreadPoolBuilder::new().num_threads(nproc).build().unwrap();
     let _bg: Vec<(String, u64, u64, u64)> = pool.install(|| {
         regions.par_iter()
-            .flat_map(|i| bam_pileup(bam_ifile, &i))
+            .flat_map(|i| bam_pileup(bam_ifile, &i, &binsize))
             .collect()
     });
     // write bedgraph
-    let mut writer = BufWriter::new(File::create(_bedgraph_ofile).unwrap());
+    let mut writer = BufWriter::new(File::create(bedgraph_ofile).unwrap());
     for i in _bg {
         writeln!(writer, "{}\t{}\t{}\t{}", i.0, i.1, i.2, i.3).unwrap();
     }
