@@ -85,7 +85,6 @@ pub fn bam_pileup(bam_ifile: &str, region: &(String, u64, u64)) -> Vec<(String, 
         l_cov = cov;
         }
     // if bg is empty, whole region is 0 coverage
-    println!("Reached end of chrom {}, l_start = {}, l_end = {}, cov = {}, l_cov = {}, regionend = {}", region.0, l_start, l_end, l_cov, l_cov, region.2);
     if bg.is_empty() {
         bg.push((region.0.clone(), l_start, region.2, 0));
     } else {
