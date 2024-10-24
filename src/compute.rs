@@ -34,6 +34,7 @@ pub fn parse_regions(regions: &Vec<(String, u64, u64)>, bam_ifile: &str) -> Vec<
     return chromregions;
 }
 
+// unused as values are only used in the next iteration of the loop.
 #[allow(unused_assignments)]
 pub fn bam_pileup(bam_ifile: &str, region: &(String, u64, u64)) -> Vec<(String, u64, u64, u64)> {
 
@@ -42,7 +43,6 @@ pub fn bam_pileup(bam_ifile: &str, region: &(String, u64, u64)) -> Vec<(String, 
         .expect(&format!("Error fetching region: {:?}", region));
 
     let mut bg: Vec<(String, u64, u64, u64)> = Vec::new();
-
     let mut l_start: u64 = region.1;
     let mut l_end: u64 = region.1;
     let mut l_cov: u64 = 0;
@@ -50,10 +50,18 @@ pub fn bam_pileup(bam_ifile: &str, region: &(String, u64, u64)) -> Vec<(String, 
     let mut pileup_start: bool = true;
 
     for p in bam.pileup() {
-        let pileup = p.unwrap();
+        // Per default pileups count deletions in cigar string too.
+        // For consistency with previous deepTools functionality, we ignore them.
+        // to be fair I think they shouldn't be counted anyhow, but who am I ?
+        // Note that coverages can be 0 now.
+        let pileup = p.expect("Error parsing pileup.");
+        let mut cov: u64 = 0;
+        for _a in pileup.alignments() {
+            if !_a.is_del() {
+                cov += 1;
+            }
+        }
         let pos = pileup.pos() as u64;
-        let cov = pileup.depth() as u64;
-
         if pileup_start {
             // if the first pileup is not at the start of the region, write 0 coverage
             if pos > l_start {
@@ -77,8 +85,16 @@ pub fn bam_pileup(bam_ifile: &str, region: &(String, u64, u64)) -> Vec<(String, 
         l_cov = cov;
         }
     // if bg is empty, whole region is 0 coverage
+    println!("Reached end of chrom {}, l_start = {}, l_end = {}, cov = {}, l_cov = {}, regionend = {}", region.0, l_start, l_end, l_cov, l_cov, region.2);
     if bg.is_empty() {
         bg.push((region.0.clone(), l_start, region.2, 0));
+    } else {
+        // Still need to write the last pileup(s)
+        bg.push((region.0.clone(), l_start, l_end + 1, l_cov));
+        // Make sure that if we didn't reach end of chromosome, we still write 0 cov.
+        if l_end + 1 < region.2 {
+            bg.push((region.0.clone(), l_end + 1, region.2, 0));
+        }
     }
     return bg;
 }
