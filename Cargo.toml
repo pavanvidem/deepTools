@@ -12,3 +12,4 @@ crate-type = ["cdylib"]
 pyo3 = "0.22.0"
 rust-htslib = "0.47.0"
 rayon = "1.10.0"
+itertools = "0.12.1"

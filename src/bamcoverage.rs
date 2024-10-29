@@ -17,7 +17,7 @@ pub fn r_bamcoverage(
     
     let regions = parse_regions(&regions, bam_ifile);
     let pool = ThreadPoolBuilder::new().num_threads(nproc).build().unwrap();
-    let _bg: Vec<(String, u64, u64, u64)> = pool.install(|| {
+    let _bg: Vec<(String, u64, u64, f64)> = pool.install(|| {
         regions.par_iter()
             .flat_map(|i| bam_pileup(bam_ifile, &i, &binsize))
             .collect()
