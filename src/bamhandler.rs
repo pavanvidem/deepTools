@@ -1,6 +1,7 @@
 use rust_htslib::bam::{Read, Reader};
 
-pub fn bam_stats(bam_ifile: &str) -> (u64, u64, u64) {
+pub fn bam_stats(bam_ifile: &str) -> (u64, u64, u64, u32) {
+    let mut fraglens: Vec<u32> = Vec::new();
     let mut bam = Reader::from_path(bam_ifile).unwrap();
     let mut total_reads: u64 = 0;
     let mut mapped_reads: u64 = 0;

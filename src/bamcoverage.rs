@@ -19,7 +19,7 @@ pub fn r_bamcoverage(
     _verbose: bool
 ) -> PyResult<()> {
     // Get statistics of bam file
-    let (total_reads, mapped_reads, unmapped_reads) = bam_stats(bam_ifile);
+    let (total_reads, mapped_reads, unmapped_reads, fraglen: u8) = bam_stats(bam_ifile);
     println!("Total reads: {}", total_reads);
     println!("Mapped reads: {}", mapped_reads);
     println!("Unmapped reads: {}", unmapped_reads);
