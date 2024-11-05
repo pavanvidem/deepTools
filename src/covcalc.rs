@@ -39,7 +39,7 @@ pub fn parse_regions(regions: &Vec<(String, u64, u64)>, bam_ifile: &str) -> Vec<
 /// Main workhorse for bamCoverage and bamCompare
 /// Calculates coverage either per bp (bs = 1) or over bins (bs > 1)
 #[allow(unused_assignments)]
-pub fn bam_pileup(bam_ifile: &str, region: &(String, u64, u64), binsize: &u32) -> Vec<(String, u64, u64, f64)> {
+pub fn bam_pileup(bam_ifile: &str, region: &(String, u64, u64), binsize: &u32, scale_factor: f64) -> Vec<(String, u64, u64, f64)> {
 
     // open bam file and fetch proper chrom
     let mut bam = IndexedReader::from_path(bam_ifile).unwrap();
@@ -99,7 +99,7 @@ pub fn bam_pileup(bam_ifile: &str, region: &(String, u64, u64), binsize: &u32) -
                 }
             }
         }
-        let bg = hashmap_to_vec(region.0.clone(), bin_counts);
+        let bg = hashmap_to_vec(region.0.clone(), bin_counts, scale_factor);
         return collapse_bgvec(bg);
     } else {
         // define output vec
@@ -163,12 +163,12 @@ pub fn bam_pileup(bam_ifile: &str, region: &(String, u64, u64), binsize: &u32) -
 }
 
 /// Converts a hashmap to a sorted bedgraph vector
-fn hashmap_to_vec(chrom: String, hm: HashMap<u64, (u64, u64, u64)>) -> Vec<(String, u64, u64, f64)> {
+fn hashmap_to_vec(chrom: String, hm: HashMap<u64, (u64, u64, u64)>, scale_factor: f64) -> Vec<(String, u64, u64, f64)> {
     
     let sortv: Vec<(String, u64, u64, f64)> = hm
         .iter()
         .sorted_by_key(|(&k, _)| k)
-        .map(|(_k, &(binstart, binend, count))| (chrom.clone(), binstart, binend, count as f64))
+        .map(|(_k, &(binstart, binend, count))| (chrom.clone(), binstart, binend, count as f64 * scale_factor))
         .collect();
     return sortv;
 }

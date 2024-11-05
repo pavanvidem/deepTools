@@ -9,7 +9,7 @@ name = "hp"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = "0.22.0"
+pyo3 = { version = "0.22.5", features = ["extension-module"] }
 rust-htslib = "0.47.0"
 rayon = "1.10.0"
 itertools = "0.12.1"

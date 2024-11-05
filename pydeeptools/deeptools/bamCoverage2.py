@@ -130,9 +130,19 @@ def process_args(args=None):
 
 def main(args=None):
     args = process_args(args)
+    print(args)
+    # Fail if user tries RPGC without setting the effective genome size
+    if args.normalizeUsing == 'RPGC' and args.effectiveGenomeSize is None:
+        print("Error: You must specify the effective genome size when using "
+              "RPGC normalization. Use --effectiveGenomeSize to set this value.")
+        sys.exit()
+    if args.effectiveGenomeSize is None:
+        args.effectiveGenomeSize = 0
     r_bamcoverage(
        args.bam, # bam file
        args.outFileName, # output file
+       args.normalizeUsing, # normalization
+       args.effectiveGenomeSize, # effective genome size
        args.numberOfProcessors, # threads
        args.binSize, # bin size
        [], # regions
