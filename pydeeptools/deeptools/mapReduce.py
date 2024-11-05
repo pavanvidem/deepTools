@@ -59,7 +59,7 @@ def mapReduce(staticArgs, func, chromSize,
     """
 
     if not genomeChunkLength:
-        genomeChunkLength = 1e5
+        genomeChunkLength = 1e100
     genomeChunkLength = int(genomeChunkLength)
 
     if verbose:
