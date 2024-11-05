@@ -1,7 +1,9 @@
 use pyo3::prelude::*;
 mod bamcoverage;
-mod compute;
+mod covcalc;
 mod alignmentsieve;
+mod bamhandler;
+mod normalization;
 
 #[pymodule]
 fn hp(m: &Bound<'_, PyModule>) -> PyResult<()> {

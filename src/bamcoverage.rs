@@ -3,7 +3,9 @@ use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
 use std::fs::File;
 use std::io::{BufWriter, Write};
-use crate::compute::{bam_pileup, parse_regions};
+use crate::covcalc::{bam_pileup, parse_regions};
+use crate::bamhandler::bam_stats;
+use crate::normalization::scale_factor;
 
 #[pyfunction]
 pub fn r_bamcoverage(
@@ -14,7 +16,12 @@ pub fn r_bamcoverage(
     regions: Vec<(String, u64, u64)>,
     _verbose: bool
 ) -> PyResult<()> {
-    
+    // Get statistics of bam file
+    let (total_reads, mapped_reads, unmapped_reads) = bam_stats(bam_ifile);
+    println!("Total reads: {}", total_reads);
+    println!("Mapped reads: {}", mapped_reads);
+    println!("Unmapped reads: {}", unmapped_reads);
+
     let regions = parse_regions(&regions, bam_ifile);
     let pool = ThreadPoolBuilder::new().num_threads(nproc).build().unwrap();
     let _bg: Vec<(String, u64, u64, f64)> = pool.install(|| {

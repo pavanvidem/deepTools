@@ -1,4 +1,4 @@
-use rust_htslib::bam::{Read, IndexedReader};
+use rust_htslib::bam::{self, Read, IndexedReader, record::Cigar};
 use std::collections::HashMap;
 use itertools::Itertools;
 
@@ -36,7 +36,8 @@ pub fn parse_regions(regions: &Vec<(String, u64, u64)>, bam_ifile: &str) -> Vec<
     return chromregions;
 }
 
-// unused as values are only used in the next iteration of the loop.
+/// Main workhorse for bamCoverage and bamCompare
+/// Calculates coverage either per bp (bs = 1) or over bins (bs > 1)
 #[allow(unused_assignments)]
 pub fn bam_pileup(bam_ifile: &str, region: &(String, u64, u64), binsize: &u32) -> Vec<(String, u64, u64, f64)> {
 
@@ -62,13 +63,44 @@ pub fn bam_pileup(bam_ifile: &str, region: &(String, u64, u64), binsize: &u32) -
             binstart = binend;
             binix += 1;
         }
+
         for record in bam.records() {
             let record = record.expect("Error parsing record.");
-            binix = record.pos() as u64 / *binsize as u64;
-            bin_counts.get_mut(&binix).unwrap().2 += 1;
+            let blocks = bam_blocks(record);
+            // keep a record of bin indices that have been updated already
+            let mut changedbins: Vec<u64> = Vec::new();
+            // split off first entry
+            for block in blocks.into_iter() {
+                // Don't count blocks that exceed the chromosome
+                if block.0 as u64 > region.2 {
+                    continue;
+                }
+                binix = block.0 as u64 / *binsize as u64;
+                if !changedbins.contains(&binix) {
+                    bin_counts.get_mut(&binix).expect(&format!("Bin index {} not in hashmap. Blocks {:?}. Region = {}", &binix, block, region.0)).2 += 1;
+                    changedbins.push(binix);
+                }
+                // Don't count blocks that exceed the chromosome
+                if block.1 as u64 > region.2 {
+                    continue;
+                }
+                binix = block.1 as u64 / *binsize as u64;
+                if !changedbins.contains(&binix) {
+                    bin_counts.get_mut(&binix).expect(&format!("Bin index {} not in hashmap. Blocks {:?}. Region = {}", &binix, block, region.0)).2 += 1;
+                    changedbins.push(binix);
+                }
+            }
+            // if changedbins contains non-continuous blocks (perhaps read length spans multiple bins), update the inbetweens
+            if let (Some(&min), Some(&max)) = (changedbins.iter().min(), changedbins.iter().max()) {
+                for ix in min..=max {
+                    if !changedbins.contains(&ix) {
+                        bin_counts.get_mut(&ix).unwrap().2 += 1;
+                    }
+                }
+            }
         }
         let bg = hashmap_to_vec(region.0.clone(), bin_counts);
-        return bg;
+        return collapse_bgvec(bg);
     } else {
         // define output vec
         let mut bg: Vec<(String, u64, u64, f64)> = Vec::new();
@@ -130,6 +162,7 @@ pub fn bam_pileup(bam_ifile: &str, region: &(String, u64, u64), binsize: &u32) -
     
 }
 
+/// Converts a hashmap to a sorted bedgraph vector
 fn hashmap_to_vec(chrom: String, hm: HashMap<u64, (u64, u64, u64)>) -> Vec<(String, u64, u64, f64)> {
     
     let sortv: Vec<(String, u64, u64, f64)> = hm
@@ -138,4 +171,50 @@ fn hashmap_to_vec(chrom: String, hm: HashMap<u64, (u64, u64, u64)>) -> Vec<(Stri
         .map(|(_k, &(binstart, binend, count))| (chrom.clone(), binstart, binend, count as f64))
         .collect();
     return sortv;
+}
+
+/// Takes a bedgraph vector, and combines adjacent blocks with equal coverage
+#[allow(unused_assignments)]
+fn collapse_bgvec(mut bg: Vec<(String, u64, u64, f64)>) -> Vec<(String, u64, u64, f64)> {
+    let mut cvec: Vec<(String, u64, u64, f64)> = Vec::new();
+    // initialize valus
+    let (mut lchrom, mut lstart, mut lend, mut lcov) = bg.remove(0);
+    for (chrom, start, end, cov) in bg.into_iter() {
+        if cov != lcov {
+            cvec.push((lchrom, lstart, lend, lcov));
+            lchrom = chrom;
+            lstart = start;
+            lend = end;
+            lcov = cov;
+        }
+        lend = end;
+    }
+    cvec.push((lchrom, lstart, lend, lcov));
+    return cvec;
+}
+
+/// Extract contigious blocks from a bam record
+/// Blocks are split per insertion, padding, deletion and ref skip
+fn bam_blocks(rec: bam::Record) -> Vec<(i64, i64)> {
+    let mut blocks: Vec<(i64, i64)> = Vec::new();
+    let mut pos = rec.pos();
+
+    for c in rec.cigar().iter() {
+        match c {
+            Cigar::Match(len) | Cigar::Equal(len) | Cigar::Diff(len) => {
+                let start = pos;
+                let end = pos + *len as i64;
+                blocks.push((start, end));
+                pos = end;
+            }
+            Cigar::Ins(len) | Cigar::Pad(len) => {
+                pos += *len as i64;
+            }
+            Cigar::Del(len) | Cigar::RefSkip(len) => {
+                pos += *len as i64;
+            }
+            _ => (),
+        }
+    }
+    return blocks;
 }
