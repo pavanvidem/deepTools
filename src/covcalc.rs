@@ -2,14 +2,17 @@ use rust_htslib::bam::{self, Read, IndexedReader, record::Cigar};
 use std::collections::HashMap;
 use itertools::Itertools;
 
-pub fn parse_regions(regions: &Vec<(String, u64, u64)>, bam_ifile: &str) -> Vec<(String, u64, u64)> {
+pub fn parse_regions(regions: &Vec<(String, u64, u64)>, bam_ifile: &str) -> (Vec<(String, u64, u64)>, HashMap<String, u32>) {
     // Takes a vector of regions, and a bam reference
     // returns a vector of regions, with all chromosomes and full lengths if original regions was empty
+    // Else it validates the regions against the information from the bam header
+    // Finally, a Vec with chromsizes is returned as well.
 
     let bam = IndexedReader::from_path(bam_ifile).unwrap();
     let header = bam.header().clone();
 
     let mut chromregions: Vec<(String, u64, u64)> = Vec::new();
+    let mut chromsizes = HashMap::new();
     if regions.is_empty() {
         // if regions is empty, we default to all chromosomes, full length
         for tid in 0..header.target_count() {
@@ -17,9 +20,18 @@ pub fn parse_regions(regions: &Vec<(String, u64, u64)>, bam_ifile: &str) -> Vec<
                 .expect("Invalid UTF-8 in chromosome name");
             let chromlen = header.target_len(tid)
                 .expect("Error retrieving length for chromosome");
-            chromregions.push((chromname, 0, chromlen));
+            chromregions.push((chromname.clone(), 0, chromlen));
+            chromsizes.insert(chromname.to_string(), chromlen as u32);
         }
     } else {
+        // populate chromsizes
+        for tid in 0..header.target_count() {
+            let chromname = String::from_utf8(header.tid2name(tid).to_vec())
+                .expect("Invalid UTF-8 in chromosome name");
+            let chromlen = header.target_len(tid)
+                .expect("Error retrieving length for chromosome");
+            chromsizes.insert(chromname, chromlen as u32);
+        }
         let validchroms: Vec<String> = header
             .target_names()
             .iter()
@@ -33,7 +45,7 @@ pub fn parse_regions(regions: &Vec<(String, u64, u64)>, bam_ifile: &str) -> Vec<
             chromregions.push((chromname.clone(), region.1, region.2));
         }
     }
-    return chromregions;
+    return (chromregions, chromsizes);
 }
 
 /// Main workhorse for bamCoverage and bamCompare

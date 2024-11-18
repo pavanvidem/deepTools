@@ -4,6 +4,7 @@ mod covcalc;
 mod alignmentsieve;
 mod bamhandler;
 mod normalization;
+mod calc;
 
 #[pymodule]
 fn hp(m: &Bound<'_, PyModule>) -> PyResult<()> {

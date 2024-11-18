@@ -1,4 +1,4 @@
-pub fn scale_factor(norm_method: &str, mapped: u64, binsize: u64, effective_genome_size) -> f64 {
+pub fn scale_factor(norm_method: &str, mapped: u64, binsize: u64, effective_genome_size: u64) -> f64 {
     let mut scale_factor = 1.0;
     return match norm_method {
         "RPKM" => {
