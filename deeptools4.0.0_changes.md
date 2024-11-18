@@ -7,6 +7,6 @@ for -bs > 1, a read is split in multiple contiguous blocks
   - multiple blocks in multiple bins count as 1 per bin  
   - one block spanning multiple bins counts as 1 in each bin  
 
-# Glossary for equations
+# normalization
 
-RPKM = 
+Exactscaling is no longer an option, it's always performed.
