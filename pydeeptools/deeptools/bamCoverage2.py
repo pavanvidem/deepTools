@@ -136,11 +136,14 @@ def main(args=None):
         print("Error: You must specify the effective genome size when using "
               "RPGC normalization. Use --effectiveGenomeSize to set this value.")
         sys.exit()
-    if args.effectiveGenomeSize is None:
+    if not args.effectiveGenomeSize:
         args.effectiveGenomeSize = 0
+    if not args.normalizeUsing:
+        args.normalizeUsing = 'None'
     r_bamcoverage(
        args.bam, # bam file
        args.outFileName, # output file
+       args.outFileFormat, # output format
        args.normalizeUsing, # normalization
        args.effectiveGenomeSize, # effective genome size
        args.numberOfProcessors, # threads
@@ -148,3 +151,6 @@ def main(args=None):
        [], # regions
        True # verbose
     )
+    import pyBigWig
+    a = pyBigWig.open(args.outFileName)
+    a.header()

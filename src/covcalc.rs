@@ -146,12 +146,12 @@ pub fn bam_pileup(bam_ifile: &str, region: &(String, u64, u64), binsize: &u32, s
                 l_cov = cov;
             } else {
                 if pos != l_end + 1 {
-                    bg.push((region.0.clone(), l_start, l_end + 1, l_cov as f64));
+                    bg.push((region.0.clone(), l_start, l_end + 1, l_cov as f64 * scale_factor));
                     bg.push((region.0.clone(), l_end + 1, pos, 0 as f64));
                     l_start = pos;
                     l_cov = cov;
                 } else if l_cov != cov {
-                    bg.push((region.0.clone(), l_start, pos, l_cov as f64));
+                    bg.push((region.0.clone(), l_start, pos, l_cov as f64 * scale_factor));
                     l_start = pos;
                 }
             }
@@ -163,7 +163,7 @@ pub fn bam_pileup(bam_ifile: &str, region: &(String, u64, u64), binsize: &u32, s
             bg.push((region.0.clone(), l_start, region.2, 0 as f64));
         } else {
             // Still need to write the last pileup(s)
-            bg.push((region.0.clone(), l_start, l_end + 1, l_cov as f64));
+            bg.push((region.0.clone(), l_start, l_end + 1, l_cov as f64 * scale_factor));
             // Make sure that if we didn't reach end of chromosome, we still write 0 cov.
             if l_end + 1 < region.2 {
                 bg.push((region.0.clone(), l_end + 1, region.2, 0 as f64));
