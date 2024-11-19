@@ -6,7 +6,7 @@ use std::io::{BufWriter, Write};
 use bigtools::{BigWigWrite, Value};
 use bigtools::beddata::BedParserStreamingIterator;
 use crate::covcalc::{bam_pileup, parse_regions};
-use crate::bamhandler::bam_stats;
+use crate::filehandler::bam_stats;
 use crate::normalization::scale_factor;
 
 #[pyfunction]
@@ -56,8 +56,9 @@ pub fn r_bamcoverage(
             ),
             true
         );
+        // Theoretically one could add more threads here too, but this would require rewrite of the _bg iter upstream.
         let runtime = tokio::runtime::Builder::new_multi_thread()
-            .worker_threads(nproc)
+            .worker_threads(1)
             .build()
             .expect("Unable to create tokio runtime for bw writing.");
         let writer = BigWigWrite::create_file(ofile, chromsizes).unwrap();
