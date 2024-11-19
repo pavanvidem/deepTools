@@ -45,6 +45,8 @@ pub fn parse_regions(regions: &Vec<(String, u64, u64)>, bam_ifile: &str) -> (Vec
             chromregions.push((chromname.clone(), region.1, region.2));
         }
     }
+    // Sort regions to make our live easier down the line
+    chromregions.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
     return (chromregions, chromsizes);
 }
 
@@ -120,7 +122,6 @@ pub fn bam_pileup(bam_ifile: &str, region: &(String, u64, u64), binsize: &u32, s
         let mut l_start: u64 = region.1;
         let mut l_end: u64 = region.1;
         let mut l_cov: u64 = 0;
-        // let chrlen: u64 = bam.header().target_len(bam.header().tid(region.0.as_bytes()).unwrap()).unwrap();
         let mut pileup_start: bool = true;
 
         for p in bam.pileup() {
