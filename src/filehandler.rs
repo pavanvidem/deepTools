@@ -16,7 +16,7 @@ pub fn bam_ispaired(bam_ifile: &str) -> bool {
     return false;
 }
 
-pub fn write_file(ofile: &str, filetype: &str, bg: Vec<(String, u64, u64, f64)>, chromsizes: HashMap<String, u32>) -> Result<(), std::string::String> {
+pub fn write_file(ofile: &str, filetype: &str, bg: Vec<(String, u64, u64, f64)>, chromsizes: HashMap<String, u32>) {
     if filetype == "bedgraph" {
         // write output file, bedgraph
         let mut writer = BufWriter::new(File::create(ofile).unwrap());
@@ -39,7 +39,6 @@ pub fn write_file(ofile: &str, filetype: &str, bg: Vec<(String, u64, u64, f64)>,
         println!("Init writer");
         let writer = BigWigWrite::create_file(ofile, chromsizes).unwrap();
         println!("Start writer");
-        writer.write(vals, runtime);
+        let _ = writer.write(vals, runtime);
     }
-    Ok(())
 }

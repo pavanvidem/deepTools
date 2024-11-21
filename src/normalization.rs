@@ -6,6 +6,7 @@ pub fn scale_factor(
     binsize: u32,
     effective_genome_size: u64,
     readlen: f32,
+    _fraglen: f32,
     verbose: &bool
 ) -> f64 {
     let mut scale_factor = 1.0;
@@ -44,8 +45,9 @@ pub fn scale_factor_bamcompare(
     norm_method: &str,
     mapped_bam1: u64,
     mapped_bam2: u64,
-    _binsize: u64,
-    _effective_genome_size: u64
+    _binsize: u32,
+    _effective_genome_size: u64,
+    _norm: &str
 ) -> (f64, f64) {
     return match norm_method {
         "readCount" => {

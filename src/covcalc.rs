@@ -233,6 +233,32 @@ pub fn bam_pileup(
     return (bg, mapped_reads, unmapped_reads, readlens, fraglens);
 }
 
+/// Extract contigious blocks from a bam record
+/// Blocks are split per insertion, padding, deletion and ref skip
+fn bam_blocks(rec: bam::Record) -> Vec<(i64, i64)> {
+    let mut blocks: Vec<(i64, i64)> = Vec::new();
+    let mut pos = rec.pos();
+
+    for c in rec.cigar().iter() {
+        match c {
+            Cigar::Match(len) | Cigar::Equal(len) | Cigar::Diff(len) => {
+                let start = pos;
+                let end = pos + *len as i64;
+                blocks.push((start, end));
+                pos = end;
+            }
+            Cigar::Ins(len) | Cigar::Pad(len) => {
+                pos += *len as i64;
+            }
+            Cigar::Del(len) | Cigar::RefSkip(len) => {
+                pos += *len as i64;
+            }
+            _ => (),
+        }
+    }
+    return blocks;
+}
+
 /// Takes a bedgraph vector, and combines adjacent blocks with equal coverage
 #[allow(unused_assignments)]
 pub fn collapse_bgvec(mut bg: Vec<(String, u64, u64, f64)>, scale_factor: f64) -> Vec<(String, u64, u64, f64)> {
@@ -259,28 +285,92 @@ pub fn collapse_bgvec(mut bg: Vec<(String, u64, u64, f64)>, scale_factor: f64) -
     return cvec;
 }
 
-/// Extract contigious blocks from a bam record
-/// Blocks are split per insertion, padding, deletion and ref skip
-fn bam_blocks(rec: bam::Record) -> Vec<(i64, i64)> {
-    let mut blocks: Vec<(i64, i64)> = Vec::new();
-    let mut pos = rec.pos();
+/// Takes two bedgraph vectors, and combines adjacent blocks with equal coverage
+#[allow(unused_assignments)]
+pub fn collapse_bgvecs(
+    mut bg1: Vec<(String, u64, u64, f64)>,
+    mut bg2: Vec<(String, u64, u64, f64)>,
+    sf1: f64,
+    sf2: f64,
+    pseudocount: f64,
+    operation: &str
+) -> Vec<(String, u64, u64, f64)> {
+    assert_eq!(bg1.len(), bg2.len(), "Bedgraph vectors must be of equal length.");
+    let mut cvec: Vec<(String, u64, u64, f64)> = Vec::new();
+    // initialize values, assert equal bins
+    let (mut lchrom, mut lstart, mut lend, lcov1) = bg1.remove(0);
+    let (lchrom2, lstart2, lend2, lcov2) = bg2.remove(0);
+    assert_eq!(lchrom, lchrom2,"Chromosomes in bedgraph vectors must be equal.");
+    assert_eq!(lstart, lstart2,"Start positions in bedgraph vectors must be equal.");
+    assert_eq!(lend, lend2,"End positions in bedgraph vectors must be equal.");
 
-    for c in rec.cigar().iter() {
-        match c {
-            Cigar::Match(len) | Cigar::Equal(len) | Cigar::Diff(len) => {
-                let start = pos;
-                let end = pos + *len as i64;
-                blocks.push((start, end));
-                pos = end;
+    let mut lcov: f64 = calc_ratio(lcov1, lcov2, &sf1, &sf2, &pseudocount, &operation);
+    for (
+        (chrom, start, end, cov1),
+        (chrom2, start2, end2, cov2)
+    ) in bg1.into_iter().zip(bg2.into_iter()) {
+        // assert equal bins.
+        assert_eq!(chrom, chrom2,"Chromosomes in bedgraph vectors must be equal.");
+        assert_eq!(start, start2,"Start positions in bedgraph vectors must be equal.");
+        assert_eq!(end, end2,"End positions in bedgraph vectors must be equal.");
+        // Calculate coverage, depending on what operation is fed
+        let cov: f64 = calc_ratio(cov1, cov2, &sf1, &sf2, &pseudocount, &operation);
+        // Collapse bg vector properly
+        if chrom != lchrom {
+            cvec.push((lchrom, lstart, lend, lcov));
+            lchrom = chrom;
+            lstart = start;
+            lend = end;
+            lcov = cov;
+        } else if cov != lcov {
+            cvec.push((lchrom, lstart, lend, lcov));
+            lchrom = chrom;
+            lstart = start;
+            lend = end;
+            lcov = cov;
+        }
+        lend = end;
+    }
+    cvec.push((lchrom, lstart, lend, lcov));
+    return cvec;
+}
+
+fn calc_ratio(
+    cov1: f64,
+    cov2: f64,
+    sf1: &f64,
+    sf2: &f64,
+    pseudocount: &f64,
+    operation: &str
+) -> f64 {
+    // Pseudocounts are only used in log2 and ratio operations
+    // First scale factor is applied, then pseudocount, if applicable.
+    match operation {
+        "log2" => {
+            let num: f64 = (cov1 * *sf1) + *pseudocount;
+            let den: f64 = (cov2 * *sf2) + *pseudocount;
+            return (num / den).log2();
+        }
+        "ratio" => {
+            let num: f64 = (cov1 * *sf1) + *pseudocount;
+            let den: f64 = (cov2 * *sf2) + *pseudocount;
+            return num / den;
+        }
+        "reciprocal_ratio" => {
+            let num: f64 = (cov1 * *sf1) + *pseudocount;
+            let den: f64 = (cov2 * *sf2) + *pseudocount;
+            let ratio: f64 = num / den;
+            if ratio >= 1.0 {
+                return den / num;
+            } else {
+                return -num / den;
             }
-            Cigar::Ins(len) | Cigar::Pad(len) => {
-                pos += *len as i64;
-            }
-            Cigar::Del(len) | Cigar::RefSkip(len) => {
-                pos += *len as i64;
-            }
-            _ => (),
+        }
+        _ => {
+            // No operation is never allowed (on the py arg level, so just default to log2)
+            let num: f64 = (cov1 * *sf1) + *pseudocount;
+            let den: f64 = (cov2 * *sf2) + *pseudocount;
+            return (num / den).log2();
         }
     }
-    return blocks;
 }

@@ -244,7 +244,8 @@ def main(args=None):
         args.scaleFactorsMethod = 'None'
     else:
         args.normalizeUsing = 'None'
-
+    print(args)
+    args.pseudocount = 1
     r_bamcompare(
         args.bamfile1, # bam file 1
         args.bamfile2, # bam file 2
@@ -253,6 +254,8 @@ def main(args=None):
         args.normalizeUsing, # normalization method
         args.scaleFactorsMethod, # scaling method
         args.effectiveGenomeSize, # effective genome size
+        args.operation,
+        args.pseudocount,
         args.numberOfProcessors, # threads
         args.binSize, # bin size
         [], # regions

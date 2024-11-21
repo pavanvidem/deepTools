@@ -25,7 +25,7 @@ pub fn r_bamcoverage(
     // Parse regions & calculate coverage
     let (regions, chromsizes)  = parse_regions(&regions, bam_ifile);
     let pool = ThreadPoolBuilder::new().num_threads(nproc).build().unwrap();
-    let (bg, mapped, unmapped, readlen, fraglen) = pool.install(|| {
+    let (bg, mapped, _unmapped, readlen, fraglen) = pool.install(|| {
         regions.par_iter()
             .map(|i| bam_pileup(bam_ifile, &i, &binsize, &ispe))
             .reduce(
@@ -48,6 +48,7 @@ pub fn r_bamcoverage(
         binsize,
         effective_genome_size,
         readlen,
+        fraglen,
         &verbose
     );
     let bg_scaled = collapse_bgvec(bg, sf);
