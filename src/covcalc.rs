@@ -10,7 +10,6 @@ pub fn parse_regions(regions: &Vec<(String, u64, u64)>, bam_ifile: &str) -> (Vec
 
     let bam = IndexedReader::from_path(bam_ifile).unwrap();
     let header = bam.header().clone();
-
     let mut chromregions: Vec<(String, u64, u64)> = Vec::new();
     let mut chromsizes = HashMap::new();
     if regions.is_empty() {
@@ -53,12 +52,35 @@ pub fn parse_regions(regions: &Vec<(String, u64, u64)>, bam_ifile: &str) -> (Vec
 /// Main workhorse for bamCoverage and bamCompare
 /// Calculates coverage either per bp (bs = 1) or over bins (bs > 1)
 #[allow(unused_assignments)]
-pub fn bam_pileup(bam_ifile: &str, region: &(String, u64, u64), binsize: &u32, scale_factor: f64) -> Vec<(String, u64, u64, f64)> {
+pub fn bam_pileup(
+    bam_ifile: &str,
+    region: &(String, u64, u64),
+    binsize: &u32,
+    ispe: &bool
+) -> (
+    Vec<(String, u64, u64, f64)>, // bedgraph vec
+    u64, // mapped reads
+    u64, // unmapped reads
+    Vec<u32>, // read lengths
+    Vec<u32>, // fragment lengths
+)  {
+    
+    // constant to check if read is first in pair (if relevant later)
+    const FREAD: u16 = 0x40;
 
     // open bam file and fetch proper chrom
     let mut bam = IndexedReader::from_path(bam_ifile).unwrap();
     bam.fetch((region.0.as_str(), region.1, region.2))
         .expect(&format!("Error fetching region: {:?}", region));
+    
+    // init variables for mapping statistics and lengths
+    let mut mapped_reads: u64 = 0;
+    let mut unmapped_reads: u64 = 0;
+    let mut readlens: Vec<u32> = Vec::new();
+    let mut fraglens: Vec<u32> = Vec::new();
+    
+    // Create the output vector
+    let mut bg: Vec<(String, u64, u64, f64)> = Vec::new();
 
     // Two cases: either the binsize is 1, or it is > 1.
     if binsize > &1 {
@@ -80,6 +102,18 @@ pub fn bam_pileup(bam_ifile: &str, region: &(String, u64, u64), binsize: &u32, s
 
         for record in bam.records() {
             let record = record.expect("Error parsing record.");
+            if record.is_unmapped() {
+                unmapped_reads += 1;
+            } else {
+                mapped_reads += 1;
+                if *ispe {
+                    if record.is_paired() && record.is_proper_pair() && (record.flags() & FREAD != 0) {
+                        fraglens.push(record.insert_size().abs() as u32);
+                    }
+                }
+                readlens.push(record.seq_len() as u32);
+            }
+
             let blocks = bam_blocks(record);
             // keep a record of bin indices that have been updated already
             let mut changedbins: Vec<u64> = Vec::new();
@@ -91,16 +125,25 @@ pub fn bam_pileup(bam_ifile: &str, region: &(String, u64, u64), binsize: &u32, s
                 }
                 binix = block.0 as u64 / *binsize as u64;
                 if !changedbins.contains(&binix) {
-                    bin_counts.get_mut(&binix).expect(&format!("Bin index {} not in hashmap. Blocks {:?}. Region = {}", &binix, block, region.0)).2 += 1;
+                    bin_counts.get_mut(&binix).expect(
+                        &format!("Bin index {} not in hashmap. Blocks {:?}. Region = {}. Bamfile = {}", &binix, block, region.0, bam_ifile)
+                    ).2 += 1;
                     changedbins.push(binix);
                 }
                 // Don't count blocks that exceed the chromosome
                 if block.1 as u64 > region.2 {
                     continue;
                 }
-                binix = block.1 as u64 / *binsize as u64;
+                // if block.1 is at the end of a region, it should be counted in the block before (if different from first block)
+                if block.1 as u64 == region.2 {
+                    binix = (block.1 as u64 - 1) / *binsize as u64;
+                } else {
+                    binix = block.1 as u64 / *binsize as u64;
+                }
                 if !changedbins.contains(&binix) {
-                    bin_counts.get_mut(&binix).expect(&format!("Bin index {} not in hashmap. Blocks {:?}. Region = {}", &binix, block, region.0)).2 += 1;
+                    bin_counts.get_mut(&binix).expect(
+                        &format!("Bin index {} not in hashmap. Blocks {:?}. Region = {}. Bamfile = {}", &binix, block, region.0, bam_ifile)
+                    ).2 += 1;
                     changedbins.push(binix);
                 }
             }
@@ -113,17 +156,32 @@ pub fn bam_pileup(bam_ifile: &str, region: &(String, u64, u64), binsize: &u32, s
                 }
             }
         }
-        let bg = hashmap_to_vec(region.0.clone(), bin_counts, scale_factor);
-        return collapse_bgvec(bg);
-    } else {
-        // define output vec
-        let mut bg: Vec<(String, u64, u64, f64)> = Vec::new();
+        bg = bin_counts
+            .iter()
+            .sorted_by_key(|(&k, _)| k)
+            .map(|(_k, &(binstart, binend, count))| (region.0.clone(), binstart, binend, count as f64))
+            .collect();
 
+    } else {
         let mut l_start: u64 = region.1;
         let mut l_end: u64 = region.1;
         let mut l_cov: u64 = 0;
         let mut pileup_start: bool = true;
 
+        for record in bam.records() {
+            let record = record.expect("Error parsing record.");
+            if record.is_unmapped() {
+                unmapped_reads += 1;
+            } else {
+                mapped_reads += 1;
+                if *ispe {
+                    if record.is_paired() && record.is_proper_pair() && (record.flags() & FREAD != 0) {
+                        fraglens.push(record.insert_size().abs() as u32);
+                    }
+                }
+                readlens.push(record.seq_len() as u32);
+            }
+        }
         for p in bam.pileup() {
             // Per default pileups count deletions in cigar string too.
             // For consistency with previous deepTools functionality, we ignore them.
@@ -147,12 +205,12 @@ pub fn bam_pileup(bam_ifile: &str, region: &(String, u64, u64), binsize: &u32, s
                 l_cov = cov;
             } else {
                 if pos != l_end + 1 {
-                    bg.push((region.0.clone(), l_start, l_end + 1, l_cov as f64 * scale_factor));
+                    bg.push((region.0.clone(), l_start, l_end + 1, l_cov as f64));
                     bg.push((region.0.clone(), l_end + 1, pos, 0 as f64));
                     l_start = pos;
                     l_cov = cov;
                 } else if l_cov != cov {
-                    bg.push((region.0.clone(), l_start, pos, l_cov as f64 * scale_factor));
+                    bg.push((region.0.clone(), l_start, pos, l_cov as f64));
                     l_start = pos;
                 }
             }
@@ -164,37 +222,32 @@ pub fn bam_pileup(bam_ifile: &str, region: &(String, u64, u64), binsize: &u32, s
             bg.push((region.0.clone(), l_start, region.2, 0 as f64));
         } else {
             // Still need to write the last pileup(s)
-            bg.push((region.0.clone(), l_start, l_end + 1, l_cov as f64 * scale_factor));
+            bg.push((region.0.clone(), l_start, l_end + 1, l_cov as f64));
             // Make sure that if we didn't reach end of chromosome, we still write 0 cov.
             if l_end + 1 < region.2 {
                 bg.push((region.0.clone(), l_end + 1, region.2, 0 as f64));
             }
         }
-        return bg;
     }
-    
-}
-
-/// Converts a hashmap to a sorted bedgraph vector
-fn hashmap_to_vec(chrom: String, hm: HashMap<u64, (u64, u64, u64)>, scale_factor: f64) -> Vec<(String, u64, u64, f64)> {
-    
-    let sortv: Vec<(String, u64, u64, f64)> = hm
-        .iter()
-        .sorted_by_key(|(&k, _)| k)
-        .map(|(_k, &(binstart, binend, count))| (chrom.clone(), binstart, binend, count as f64 * scale_factor))
-        .collect();
-    return sortv;
+    // Collect median read lengths and fragment lengths if needed
+    return (bg, mapped_reads, unmapped_reads, readlens, fraglens);
 }
 
 /// Takes a bedgraph vector, and combines adjacent blocks with equal coverage
 #[allow(unused_assignments)]
-fn collapse_bgvec(mut bg: Vec<(String, u64, u64, f64)>) -> Vec<(String, u64, u64, f64)> {
+pub fn collapse_bgvec(mut bg: Vec<(String, u64, u64, f64)>, scale_factor: f64) -> Vec<(String, u64, u64, f64)> {
     let mut cvec: Vec<(String, u64, u64, f64)> = Vec::new();
-    // initialize valus
+    // initialize values
     let (mut lchrom, mut lstart, mut lend, mut lcov) = bg.remove(0);
     for (chrom, start, end, cov) in bg.into_iter() {
-        if cov != lcov {
-            cvec.push((lchrom, lstart, lend, lcov));
+        if chrom != lchrom {
+            cvec.push((lchrom, lstart, lend, lcov * scale_factor));
+            lchrom = chrom;
+            lstart = start;
+            lend = end;
+            lcov = cov;
+        } else if cov != lcov {
+            cvec.push((lchrom, lstart, lend, lcov * scale_factor));
             lchrom = chrom;
             lstart = start;
             lend = end;
@@ -202,7 +255,7 @@ fn collapse_bgvec(mut bg: Vec<(String, u64, u64, f64)>) -> Vec<(String, u64, u64
         }
         lend = end;
     }
-    cvec.push((lchrom, lstart, lend, lcov));
+    cvec.push((lchrom, lstart, lend, lcov * scale_factor));
     return cvec;
 }
 

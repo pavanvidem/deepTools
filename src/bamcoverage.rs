@@ -1,9 +1,10 @@
 use pyo3::prelude::*;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
-use crate::covcalc::{bam_pileup, parse_regions};
-use crate::filehandler::{bam_stats, write_file};
+use crate::covcalc::{bam_pileup, parse_regions, collapse_bgvec};
+use crate::filehandler::{bam_ispaired, write_file};
 use crate::normalization::scale_factor;
+use crate::calc::median;
 
 #[pyfunction]
 pub fn r_bamcoverage(
@@ -15,29 +16,42 @@ pub fn r_bamcoverage(
     nproc: usize,
     binsize: u32,
     regions: Vec<(String, u64, u64)>,
-    _verbose: bool
+    verbose: bool
 ) -> PyResult<()> {
-
-    // Get statistics of bam file
-    let (total_reads, mapped_reads, unmapped_reads, fraglen) = bam_stats(bam_ifile);
-    println!("Total reads: {}", total_reads);
-    println!("Mapped reads: {}", mapped_reads);
-    println!("Unmapped reads: {}", unmapped_reads);
-    println!("Fragment length: {}", fraglen);
-
-    let scale_factor = scale_factor(norm, mapped_reads, binsize as u64, effective_genome_size);
-    println!("Scale factor: {} calculated for norm: {}", scale_factor, norm);
-
+    let ispe = bam_ispaired(bam_ifile);
+    if verbose {
+        println!("Sample: {} is-paired: {}", bam_ifile, ispe);
+    }
     // Parse regions & calculate coverage
     let (regions, chromsizes)  = parse_regions(&regions, bam_ifile);
     let pool = ThreadPoolBuilder::new().num_threads(nproc).build().unwrap();
-    let _bg: Vec<(String, u64, u64, f64)> = pool.install(|| {
+    let (bg, mapped, unmapped, readlen, fraglen) = pool.install(|| {
         regions.par_iter()
-            .flat_map(|i| bam_pileup(bam_ifile, &i, &binsize, scale_factor))
-            .collect()
+            .map(|i| bam_pileup(bam_ifile, &i, &binsize, &ispe))
+            .reduce(
+                || (vec![], 0, 0, vec![], vec![]),
+                |(mut _bg, mut _mapped, mut _unmapped, mut _readlen, mut _fraglen), (bg, mapped, unmapped, readlen, fraglen)| {
+                    _bg.extend(bg);
+                    _readlen.extend(readlen);
+                    _fraglen.extend(fraglen);
+                    _mapped += mapped;
+                    _unmapped += unmapped;
+                    (_bg, _mapped, _unmapped, _readlen, _fraglen)
+                }
+            )
     });
-
+    let readlen = median(readlen);
+    let fraglen = median(fraglen);
+    let sf = scale_factor(
+        norm, 
+        mapped,
+        binsize,
+        effective_genome_size,
+        readlen,
+        &verbose
+    );
+    let bg_scaled = collapse_bgvec(bg, sf);
     // Create output
-    write_file(ofile, ofiletype, _bg, chromsizes).unwrap();
+    write_file(ofile, ofiletype, bg_scaled, chromsizes);
     Ok(())
 }
