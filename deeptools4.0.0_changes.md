@@ -10,3 +10,9 @@ for -bs > 1, a read is split in multiple contiguous blocks
 # normalization
 
 Exactscaling is no longer an option, it's always performed.
+
+# Todo
+
+ - allow multithreaded bw writing
+ - properly divide region work over threads -> region sorting & taking size into account
+ 

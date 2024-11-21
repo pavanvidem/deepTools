@@ -149,8 +149,5 @@ def main(args=None):
        args.numberOfProcessors, # threads
        args.binSize, # bin size
        [], # regions
-       True # verbose
+       args.verbose # verbose
     )
-    import pyBigWig
-    a = pyBigWig.open(args.outFileName)
-    a.header()
