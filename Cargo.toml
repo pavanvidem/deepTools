@@ -1,0 +1,18 @@
+[package]
+name = "hp"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "hp"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.22.5", features = ["extension-module"] }
+rust-htslib = "0.47.0"
+rayon = "1.10.0"
+itertools = "0.12.1"
+bigtools = "0.5.3"
+tokio = "*"
+tempfile = "*"

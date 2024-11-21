@@ -53,3 +53,10 @@ _sources
 
 # Planemo
 tool_test*
+
+# local conda env folder
+env.yml
+
+# Rust stuff
+Cargo.lock
+target*

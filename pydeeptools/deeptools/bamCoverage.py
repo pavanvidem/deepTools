@@ -252,7 +252,6 @@ def main(args=None):
                                          chrsToSkip=args.ignoreForNormalization,
                                          verbose=args.verbose,
                                          )
-
     wr.run(writeBedGraph.scaleCoverage, func_args, args.outFileName,
            blackListFileName=args.blackListFileName,
            format=args.outFileFormat, smoothLength=args.smoothLength)

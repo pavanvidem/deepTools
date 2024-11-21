@@ -1,11 +1,17 @@
 [build-system]
 requires = [
-    "setuptools"
+    "maturin"
 ]
+build-backend = "maturin"
+
+[tool.maturin]
+python-source = "pydeeptools"
+module-name = "deeptools.hp"
+bindings = "pyo3"
 
 [project]
 name = "deepTools"
-version = "3.5.6"
+version = "4.0.0"
 authors = [
     {name="Fidel Ramirez"},
     {name="Devon P Ryan"},
@@ -77,3 +83,5 @@ plotFingerprint = "deeptools.plotFingerprint:main"
 plotHeatmap = "deeptools.plotHeatmap:main"
 plotPCA = "deeptools.plotPCA:main"
 plotProfile = "deeptools.plotProfile:main"
+bamCoverage2 = "deeptools.bamCoverage2:main"
+bamCompare2 = "deeptools.bamCompare2:main"
