@@ -120,7 +120,7 @@ pub fn bam_pileup(
             // split off first entry
             for block in blocks.into_iter() {
                 // Don't count blocks that exceed the chromosome
-                if block.0 as u64 > region.2 {
+                if block.0 as u64 >= region.2 {
                     continue;
                 }
                 binix = block.0 as u64 / *binsize as u64;
@@ -131,7 +131,7 @@ pub fn bam_pileup(
                     changedbins.push(binix);
                 }
                 // Don't count blocks that exceed the chromosome
-                if block.1 as u64 > region.2 {
+                if block.1 as u64 >= region.2 {
                     continue;
                 }
                 // if block.1 is at the end of a region, it should be counted in the block before (if different from first block)
