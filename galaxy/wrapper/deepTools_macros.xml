@@ -49,7 +49,7 @@
         $advancedOpt.ignoreDuplicates
         $advancedOpt.centerReads
         #if $advancedOpt.minMappingQuality:
-            --minMappingQuality '$advancedOpt.minMappingQuality'
+            --minMappingQuality $advancedOpt.minMappingQuality
         #end if
         #if $advancedOpt.samFlagInclude:
             --samFlagInclude $advancedOpt.samFlagInclude
@@ -716,7 +716,7 @@ is vital to you, select Yes below.">
     </xml>
 
     <xml name="output_dpi">
-        <param argument="--dpi" name="dpi" type="integer" value="200" size="3" optional="True"
+        <param argument="--dpi" type="integer" value="200" size="3" optional="True"
             label="Image dpi" help=""/>
     </xml>
 
