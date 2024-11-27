@@ -180,12 +180,12 @@
         </data>
     </outputs>
     <tests>
-        <test>
+        <test expect_num_outputs="1">
             <param name="command" value="info" />
             <param name="matrixFile" value="computeMatrix_result1.gz" ftype="deeptools_compute_matrix_archive" />
             <output name="outFileTxt" file="computeMatrixOperations.txt" ftype="txt" />
         </test>
-        <test>
+        <test expect_num_outputs="1">
             <param name="command" value="rbind" />
             <param name="matrixFile" value="computeMatrix_result1.gz" ftype="deeptools_compute_matrix_archive" />
             <param name="matrixFile" value="computeMatrix_result1.gz" ftype="deeptools_compute_matrix_archive" />
