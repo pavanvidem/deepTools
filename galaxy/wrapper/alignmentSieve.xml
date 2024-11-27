@@ -111,8 +111,8 @@
         <expand macro="samFlags"/>
         <expand macro="fragLength"/>
         <expand macro="blacklist"/>
-        <param argument="--filterMetrics" type="boolean" label="Save the total number of reads seen and remaining after filtering to a text file?" help=""/>
-        <param argument="--filteredOutReads" type="boolean" label="Save alignments NOT passing the filtering criteria?" help=""/>
+        <param argument="--filterMetrics" type="boolean" label="Save the total number of reads seen and remaining after filtering to a text file?"/>
+        <param argument="--filteredOutReads" type="boolean" label="Save alignments NOT passing the filtering criteria?"/>
     </inputs>
     <outputs>
         <data format="tabular" name="filterMetricsFile" label="${tool.name} on ${on_string}: filtering metrics">
