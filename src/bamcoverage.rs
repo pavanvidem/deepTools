@@ -2,11 +2,16 @@ use pyo3::prelude::*;
 use pyo3::types::PyList;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
-use crate::covcalc::{bam_pileup, parse_regions, collapse_bgvec, alignmentfilters};
-use crate::filehandler::{bam_ispaired, write_file};
+use std::io::prelude::*;
+use std::io::{BufReader};
+use std::fs::File;
+use tempfile::NamedTempFile;
+use bigtools::{Value};
+use crate::covcalc::{bam_pileup, parse_regions, alignmentfilters};
+use crate::filehandler::{bam_ispaired, write_covfile};
 use crate::normalization::scale_factor;
 use crate::calc::median;
-use tempfile::NamedTempFile;
+
 
 #[pyfunction]
 pub fn r_bamcoverage(
@@ -64,12 +69,13 @@ pub fn r_bamcoverage(
     if verbose {
         println!("Sample: {} is-paired: {}", bamifile, ispe);
     }
+
     // Parse regions & calculate coverage
     let (regions, chromsizes)  = parse_regions(&regions, bamifile);
     let pool = ThreadPoolBuilder::new().num_threads(nproc).build().unwrap();
     let (bg, mapped, _unmapped, readlen, fraglen) = pool.install(|| {
         regions.par_iter()
-            .map(|i| bam_pileup(bamifile, &i, &binsize, &ispe, &ignorechr, &filters))
+            .map(|i| bam_pileup(bamifile, &i, &binsize, &ispe, &ignorechr, &filters, true))
             .reduce(
                 || (vec![], 0, 0, vec![], vec![]),
                 |(mut _bg, mut _mapped, mut _unmapped, mut _readlen, mut _fraglen), (bg, mapped, unmapped, readlen, fraglen)| {
@@ -99,8 +105,26 @@ pub fn r_bamcoverage(
         scalefactor,
         &verbose
     );
-    // Create output
-    write_file(ofile, ofiletype, bg, chromsizes, sf);
+    
+    // Create output stream
+    let lines = bg.into_iter().flat_map(
+        |bg| {
+            let reader = BufReader::new(File::open(bg).unwrap());
+            reader.lines().map(
+                |l| {
+                    let l = l.unwrap();
+                    let fields: Vec<&str> = l.split('\t').collect();
+                    let chrom: String = fields[0].to_string();
+                    let start: u32 = fields[1].parse().unwrap();
+                    let end: u32 = fields[2].parse().unwrap();
+                    let cov: f32 = fields[3].parse().unwrap();
+                    (chrom, Value {start: start, end: end, value: cov * sf})
+                }
+            )
+        }
+    );
+
+    write_covfile(lines, ofile, ofiletype, chromsizes);
     Ok(())
 }
 

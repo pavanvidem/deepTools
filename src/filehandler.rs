@@ -25,24 +25,10 @@ pub fn bam_ispaired(bam_ifile: &str) -> bool {
     return false;
 }
 
-pub fn write_file(ofile: &str, filetype: &str, bgs: Vec<TempPath>, chromsizes: HashMap<String, u32>, sf: f32) {
-    // Create iterator over bg files
-    let lines = bgs.into_iter().flat_map(
-        |bg| {
-            let reader = BufReader::new(File::open(bg).unwrap());
-            reader.lines().map(
-                |l| {
-                    let l = l.unwrap();
-                    let fields: Vec<&str> = l.split('\t').collect();
-                    let chrom: String = fields[0].to_string();
-                    let start: u32 = fields[1].parse().unwrap();
-                    let end: u32 = fields[2].parse().unwrap();
-                    let cov: f32 = fields[3].parse().unwrap();
-                    (chrom, Value {start: start, end: end, value: cov * sf})
-                }
-            )
-        }
-    );
+pub fn write_covfile<LI>(lines: LI, ofile: &str, filetype: &str, chromsizes: HashMap<String, u32>)
+where
+    LI: Iterator<Item = (String, Value)>,
+ {
     if filetype == "bedgraph" {
         // write output file, bedgraph
         let mut writer = BufWriter::new(File::create(ofile).unwrap());
@@ -58,12 +44,9 @@ pub fn write_file(ofile: &str, filetype: &str, bgs: Vec<TempPath>, chromsizes: H
             .worker_threads(1)
             .build()
             .expect("Unable to create tokio runtime for bw writing.");
-        println!("Init writer");
         let writer = BigWigWrite::create_file(ofile, chromsizes).unwrap();
-        println!("Start writer");
         let _ = writer.write(vals, runtime);
     }
-
 }
 
 pub fn read_bedfiles(bed_files: &Vec<String>) -> (Vec<(String, u32, u32, String, String, String)>, HashMap<String, u32>) {
