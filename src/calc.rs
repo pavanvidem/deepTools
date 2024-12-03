@@ -13,3 +13,44 @@ pub fn median(mut nvec: Vec<u32>) -> f32 {
         }
     }
 }
+
+
+pub fn calc_ratio(
+    cov1: f32,
+    cov2: f32,
+    sf1: &f32,
+    sf2: &f32,
+    pseudocount: &f32,
+    operation: &str
+) -> f32 {
+    // Pseudocounts are only used in log2 and ratio operations
+    // First scale factor is applied, then pseudocount, if applicable.
+    match operation {
+        "log2" => {
+            let num: f32 = (cov1 * *sf1) + *pseudocount;
+            let den: f32 = (cov2 * *sf2) + *pseudocount;
+            return (num / den).log2();
+        }
+        "ratio" => {
+            let num: f32 = (cov1 * *sf1) + *pseudocount;
+            let den: f32 = (cov2 * *sf2) + *pseudocount;
+            return num / den;
+        }
+        "reciprocal_ratio" => {
+            let num: f32 = (cov1 * *sf1) + *pseudocount;
+            let den: f32 = (cov2 * *sf2) + *pseudocount;
+            let ratio: f32 = num / den;
+            if ratio >= 1.0 {
+                return den / num;
+            } else {
+                return -num / den;
+            }
+        }
+        _ => {
+            // No operation is never allowed (on the py arg level, so just default to log2)
+            let num: f32 = (cov1 * *sf1) + *pseudocount;
+            let den: f32 = (cov2 * *sf2) + *pseudocount;
+            return (num / den).log2();
+        }
+    }
+}
