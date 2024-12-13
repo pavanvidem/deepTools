@@ -222,17 +222,11 @@ def computeMatrixOptArgs(case=['scale-regions', 'reference-point'][0]):
 
     optional.add_argument('--sortRegions',
                           help='Whether the output file should present the '
-                          'regions sorted. The default is to not sort the regions. '
+                          'regions sorted. The default (keep) retains order as in -R.'
                           'Note that this is only useful if you plan to plot '
                           'the results yourself and not, for example, with '
-                          'plotHeatmap, which will override this. Note also that '
-                          'unsorted output will be in whatever order the regions '
-                          'happen to be processed in and not match the order in '
-                          'the input files. If you require the output order to '
-                          'match that of the input regions, then either specify '
-                          '"keep" or use computeMatrixOperations to resort the '
-                          'results file. (Default: %(default)s)',
-                          choices=["descend", "ascend", "no", "keep"],
+                          'plotHeatmap, which will override this. (Default: %(default)s)',
+                          choices=["descend", "ascend", "keep"],
                           default='keep')
 
     optional.add_argument('--sortUsing',
@@ -409,6 +403,7 @@ def main(args=None):
         args.regionBodyLength,
         args.binSize,
         args.missingDataAsZero,
+        args.nanAfterEnd,
         args.referencePoint,
         args.numberOfProcessors,
         args.verbose,

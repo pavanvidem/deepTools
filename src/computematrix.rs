@@ -18,6 +18,7 @@ pub fn r_computematrix(
     regionbodylength: u32,
     binsize: u32,
     missingdatazero: bool,
+    nanafterend: bool,
     referencepoint: &str,
     nproc: usize,
     verbose: bool,
@@ -65,6 +66,7 @@ pub fn r_computematrix(
         binsize: binsize,
         cols_expected: ((bw_files.len() * bpsum as usize) / binsize as usize),
         missingdata_as_zero: missingdatazero,
+        nan_after_end: nanafterend,
         referencepoint: referencepoint.to_string(),
         mode: mode.to_string(),
         bwfiles: bw_files.len(),
@@ -115,6 +117,7 @@ fn slop_regions(
     // The number of columns per region needs to be fixed per region.
     // Note that the before / after could mean that we run out of chromosome. 
     // Invalid regions (later to be encoded as NA or 0), will be pushed as (0,0) tuples.
+    // Note that if nan_after_end is set to true, we will push (0,0) tuples after the end of the region.
     let col_expected = scale_regions.cols_expected / scale_regions.bwfiles;
     for region in regions.iter() {
         // To implement: 
@@ -139,7 +142,12 @@ fn slop_regions(
             if absstart < 0  || bin > chromend as i32 {
                 regionsizes.push((0,0));
             } else {
-                regionsizes.push((absstart as u32, bin as u32))
+                // If we reached end of region, and nan_after_end is true, push (0,0)
+                if scale_regions.nan_after_end && absstart as u32 >= region.2 {
+                    regionsizes.push((0,0))
+                } else {
+                    regionsizes.push((absstart as u32, bin as u32))
+                }
             }
             absstart = bin;
         }
@@ -166,6 +174,7 @@ pub struct Scalingregions {
     pub binsize: u32,
     pub cols_expected: usize,
     pub missingdata_as_zero: bool,
+    pub nan_after_end: bool,
     pub referencepoint: String,
     pub mode: String,
     pub bwfiles: usize,
