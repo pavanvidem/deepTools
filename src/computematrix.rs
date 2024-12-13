@@ -11,12 +11,12 @@ pub fn r_computematrix(
     mode: &str,
     bedlis: Py<PyList>,
     bwlis: Py<PyList>,
-    upstream: u64,
-    downstream: u64,
-    unscaled5prime: u64,
-    unscaled3prime: u64,
-    regionbodylength: u64,
-    binsize: u64,
+    upstream: u32,
+    downstream: u32,
+    unscaled5prime: u32,
+    unscaled3prime: u32,
+    regionbodylength: u32,
+    binsize: u32,
     missingdatazero: bool,
     referencepoint: &str,
     nproc: usize,
@@ -28,8 +28,8 @@ pub fn r_computematrix(
     let mut bed_files: Vec<String> = Vec::new();
     let mut bw_files: Vec<String> = Vec::new();
     Python::with_gil(|py| {
-        bed_files = bedlis.extract(py).expect("Failed to retrieve bed file strings.");
-        bw_files = bwlis.extract(py).expect("Failed to retrieve bed file strings.");
+        bed_files = bedlis.extract(py).expect("Failed to retrieve bed files.");
+        bw_files = bwlis.extract(py).expect("Failed to retrieve bigwig filess.");
     });
     // Get chromosome boundaries from first bigwig file.
     let chromsizes = chrombounds_from_bw(&bw_files.get(0).unwrap());
@@ -45,6 +45,16 @@ pub fn r_computematrix(
             .into_owned();
         bedlabels.push(entryname);
     }
+    let mut bwlabels: Vec<String> = Vec::new();
+    for bw in bw_files.iter() {
+        let entryname = Path::new(bw)
+            .file_stem()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned();
+        bwlabels.push(entryname);
+    }
+
     // Define the scaling regions in a struct
     let scale_regions = Scalingregions {
         upstream: upstream,
@@ -53,7 +63,7 @@ pub fn r_computematrix(
         unscaled3prime: unscaled3prime,
         regionbodylength: regionbodylength,
         binsize: binsize,
-        cols_expected: ((bw_files.len() as u64 * bpsum) / binsize) as usize,
+        cols_expected: ((bw_files.len() * bpsum as usize) / binsize as usize),
         missingdata_as_zero: missingdatazero,
         referencepoint: referencepoint.to_string(),
         mode: mode.to_string(),
@@ -61,7 +71,8 @@ pub fn r_computematrix(
         avgtype: "mean".to_string(),
         verbose: verbose,
         proc_number: nproc,
-        bedlabels: bedlabels
+        bedlabels: bedlabels,
+        bwlabels: bwlabels
     };
     // Parse regions from bed files. Note that we retain the name of the bed file (in case there are more then 1)
     // Additionaly, score and strand are also retained, if it's a 3-column bed file we just fill in '.'
@@ -72,7 +83,7 @@ pub fn r_computematrix(
         &chromsizes
     );
     let pool = ThreadPoolBuilder::new().num_threads(nproc).build().unwrap();
-    let matrix: Vec<Vec<f64>> = pool.install(|| {
+    let matrix: Vec<Vec<f32>> = pool.install(|| {
         bw_files.par_iter()
             .map(|i| bwintervals(&i, &regions, &slopregions, &scale_regions))
             .reduce(
@@ -95,11 +106,11 @@ pub fn r_computematrix(
 }
 
 fn slop_regions(
-    regions: &Vec<(String, u64, u64, String, String, String)>,
+    regions: &Vec<(String, u32, u32, String, String, String)>,
     scale_regions: &Scalingregions,
-    chromsizes: &HashMap<String, u64>
-) -> Vec<Vec<(u64, u64)>> {
-    let mut regionranges: Vec<Vec<(u64, u64)>> = Vec::new();
+    chromsizes: &HashMap<String, u32>
+) -> Vec<Vec<(u32, u32)>> {
+    let mut regionranges: Vec<Vec<(u32, u32)>> = Vec::new();
     // Idea is to create a vector of tuples with start and end of every bin (binsize passed by computeMatrix).
     // The number of columns per region needs to be fixed per region.
     // Note that the before / after could mean that we run out of chromosome. 
@@ -109,7 +120,7 @@ fn slop_regions(
         // To implement: 
         // // scale-regions + unscaled 5 and 3
         // // + and - encodings
-        let chromend: u64 = *chromsizes.get(&region.0).unwrap();
+        let chromend: u32 = *chromsizes.get(&region.0).unwrap();
         assert!(region.2 <= chromend, "Region end goes beyond chromosome boundary. Fix your bed files. {:?} > {}", region, chromend);
         assert!(region.1 <= chromend, "Region start goes beyond chromosome boundary. Fix your bed files. {:?} > {}", region, chromend);
 
@@ -120,15 +131,15 @@ fn slop_regions(
             _ => panic!("Reference should either be TSS, TES or center. {:?} is not supported.", scale_regions.referencepoint),
         };
 
-        let mut regionsizes: Vec<(u64, u64)> = Vec::new();
-        let mut absstart: i64 = anchorpoint as i64 - scale_regions.upstream as i64;
-        let absstop: i64 = anchorpoint as i64 + scale_regions.downstream as i64;
+        let mut regionsizes: Vec<(u32, u32)> = Vec::new();
+        let mut absstart: i32 = anchorpoint as i32 - scale_regions.upstream as i32;
+        let absstop: i32 = anchorpoint as i32 + scale_regions.downstream as i32;
         while absstart < absstop {
-            let bin = absstart + scale_regions.binsize as i64;
-            if absstart < 0  || bin > chromend as i64 {
+            let bin = absstart + scale_regions.binsize as i32;
+            if absstart < 0  || bin > chromend as i32 {
                 regionsizes.push((0,0));
             } else {
-                regionsizes.push((absstart as u64, bin as u64))
+                regionsizes.push((absstart as u32, bin as u32))
             }
             absstart = bin;
         }
@@ -147,12 +158,12 @@ fn slop_regions(
 }
 
 pub struct Scalingregions {
-    pub upstream: u64,
-    pub downstream: u64,
-    pub unscaled5prime: u64,
-    pub unscaled3prime: u64,
-    pub regionbodylength: u64,
-    pub binsize: u64,
+    pub upstream: u32,
+    pub downstream: u32,
+    pub unscaled5prime: u32,
+    pub unscaled3prime: u32,
+    pub regionbodylength: u32,
+    pub binsize: u32,
     pub cols_expected: usize,
     pub missingdata_as_zero: bool,
     pub referencepoint: String,
@@ -161,5 +172,6 @@ pub struct Scalingregions {
     pub avgtype: String,
     pub verbose: bool,
     pub proc_number: usize,
-    pub bedlabels: Vec<String>
+    pub bedlabels: Vec<String>,
+    pub bwlabels: Vec<String>
 }

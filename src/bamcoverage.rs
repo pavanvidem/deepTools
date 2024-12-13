@@ -5,9 +5,8 @@ use rayon::ThreadPoolBuilder;
 use std::io::prelude::*;
 use std::io::{BufReader};
 use std::fs::File;
-use tempfile::NamedTempFile;
 use bigtools::{Value};
-use crate::covcalc::{bam_pileup, parse_regions, alignmentfilters};
+use crate::covcalc::{bam_pileup, parse_regions, Alignmentfilters};
 use crate::filehandler::{bam_ispaired, write_covfile};
 use crate::normalization::scale_factor;
 use crate::calc::median;
@@ -59,7 +58,7 @@ pub fn r_bamcoverage(
         &offset, &ignorechr, &verbose
     );
     // Set alignment filters
-    let filters = alignmentfilters {
+    let filters = Alignmentfilters {
         minmappingquality: minmappingquality,
         samflaginclude: samflaginclude,
         samflagexclude: samflagexclude,
