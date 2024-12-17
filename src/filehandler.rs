@@ -13,6 +13,7 @@ use flate2::write::GzEncoder;
 use flate2::Compression;
 use tempfile::{TempPath};
 use crate::computematrix::Scalingregions;
+use crate::calc::{mean_float, median_float, min_float, max_float, sum_float, std_float};
 
 pub fn bam_ispaired(bam_ifile: &str) -> bool {
     let mut bam = Reader::from_path(bam_ifile).unwrap();
@@ -144,12 +145,19 @@ pub fn bwintervals(
                 }
             } else {
                 // Get values from the hashmap
-                let mean: f32 = (*start..*end)
+                let vals: Vec<&f32> = (*start..*end)
                     .filter_map(|bp| bwhash.get(&bp))
-                    .copied()
-                    .sum::<f32>()
-                    / (end - start) as f32;
-                bwval.push(mean);
+                    .collect();
+                let val = match scale_regions.avgtype.as_str() {
+                    "mean" => mean_float(vals),
+                    "median" => median_float(vals),
+                    "min" => min_float(vals),
+                    "max" => max_float(vals),
+                    "std" => std_float(vals),
+                    "sum" => sum_float(vals),
+                    _ => panic!("Unknown avgtype."),
+                };
+                bwval.push(val);
             }
         }
         // Make sure bwval is of expected length.

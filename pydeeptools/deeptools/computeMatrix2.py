@@ -301,12 +301,6 @@ def computeMatrixOptArgs(case=['scale-regions', 'reference-point'][0]):
                           'contains a space E.g. --samplesLabel label-1 "label 2"  ',
                           nargs='+')
 
-    optional.add_argument('--smartLabels',
-                          action='store_true',
-                          help='Instead of manually specifying labels for the input '
-                          'bigWig and BED/GTF files, this causes deepTools to use the file name '
-                          'after removing the path and extension.')
-
     # in contrast to other tools,
     # computeMatrix by default outputs
     # messages and the --quiet flag supresses them
@@ -363,6 +357,10 @@ def process_args(args=None):
                      "set to 0. Nothing to output. Maybe you want to "
                      "use the scale-regions mode?\n")
 
+    if not args.samplesLabel:
+        args.samplesLabel = []
+    if not args.sortUsingSamples:
+        args.sortUsingSamples = []
     return args
 
 
@@ -396,6 +394,7 @@ def main(args=None):
         args.command,
         args.regionsFileName,
         args.scoreFileName,
+        args.samplesLabel,
         args.beforeRegionStartLength,
         args.afterRegionStartLength,
         args.unscaled5prime,
@@ -404,6 +403,10 @@ def main(args=None):
         args.binSize,
         args.missingDataAsZero,
         args.nanAfterEnd,
+        args.averageTypeBins,
+        args.sortRegions,
+        args.sortUsing,
+        args.sortUsingSamples,
         args.referencePoint,
         args.numberOfProcessors,
         args.verbose,
