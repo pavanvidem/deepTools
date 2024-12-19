@@ -2,8 +2,8 @@
 
  - --sortRegions 'no' option no longer exists
  - Sorting ascend / descend no longer has subsorting by position.
-
-
+ - --quiet / -q option no longer exists.
+ - bed files in computeMatrix no longer support '#' to define groups.
 
 # normalization
 
@@ -25,3 +25,4 @@ Exactscaling is no longer an option, it's always performed.
  - sortRegions: descend, ascend, keep
  - sortUsing: mean, median, max, min, sum, region_length
  - averageTypeBins: mean, median, min, max ,std, sum
+ - skipZeros

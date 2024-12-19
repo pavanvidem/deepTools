@@ -77,8 +77,7 @@ def computeMatrixRequiredArgs(args=None):
                           metavar='File',
                           help='File name or names, in BED or GTF format, containing '
                                'the regions to plot. If multiple bed files are given, each one is considered a '
-                               'group that can be plotted separately. Also, adding a "#" symbol in the bed file '
-                               'causes all the regions until the previous "#" to be considered one group.',
+                               'group that can be plotted separately.',
                           nargs='+',
                           required=True)
     required.add_argument('--scoreFileName', '-S',
@@ -301,14 +300,6 @@ def computeMatrixOptArgs(case=['scale-regions', 'reference-point'][0]):
                           'contains a space E.g. --samplesLabel label-1 "label 2"  ',
                           nargs='+')
 
-    # in contrast to other tools,
-    # computeMatrix by default outputs
-    # messages and the --quiet flag supresses them
-    optional.add_argument('--quiet', '-q',
-                          help='Set to remove any warning or processing '
-                          'messages.',
-                          action='store_true')
-
     optional.add_argument('--verbose',
                           help='Being VERY verbose in the status messages. --quiet will disable this.',
                           action='store_true')
@@ -336,9 +327,6 @@ def process_args(args=None):
         parse_arguments().print_help()
         sys.exit()
 
-    if args.quiet is True:
-        args.verbose = False
-
     # Ensure before and after region length is positive
     if args.beforeRegionStartLength < 0:
         print(f"beforeRegionStartLength changed from {args.beforeRegionStartLength} into {abs(args.beforeRegionStartLength)}")
@@ -361,6 +349,10 @@ def process_args(args=None):
         args.samplesLabel = []
     if not args.sortUsingSamples:
         args.sortUsingSamples = []
+    if not args.minThreshold:
+        args.minThreshold = 0.0
+    if not args.maxThreshold:
+        args.maxThreshold = 0.0
     return args
 
 
@@ -388,8 +380,7 @@ def main(args=None):
                   'unscaled 3 prime': args.unscaled3prime
                   }
     # Assert all  regions and scores exist
-    print(parameters)
-    print(args)
+    #print(args)
     r_computematrix(
         args.command,
         args.regionsFileName,
@@ -402,7 +393,12 @@ def main(args=None):
         args.regionBodyLength,
         args.binSize,
         args.missingDataAsZero,
+        args.keepExons, # --metagene or not.
+        args.scale,
         args.nanAfterEnd,
+        args.skipZeros,
+        args.minThreshold,
+        args.maxThreshold,
         args.averageTypeBins,
         args.sortRegions,
         args.sortUsing,

@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use tempfile::{TempPath};
-use crate::computematrix::Scalingregions;
+use crate::computematrix::{Scalingregions, Revalue, Region, Bin};
 use crate::calc::{mean_float, median_float, min_float, max_float, sum_float, std_float};
 
 pub fn bam_ispaired(bam_ifile: &str) -> bool {
@@ -50,39 +50,122 @@ where
     }
 }
 
-pub fn read_bedfiles(bed_files: &Vec<String>) -> (Vec<(String, u32, u32, String, String, String)>, HashMap<String, u32>) {
+pub fn read_bedfiles(bed_files: &Vec<String>, metagene: bool) -> (Vec<Region>, HashMap<String, u32>) {
     // read all bedfiles in a Vec of strings (filepaths)
-    // returns a vec of tuples, with last entry being the filepath (without extension and dirs ~= 'smartLabels')
+    // returns a vec of Region
     let mut regionsizes: HashMap<String, u32> = HashMap::new();
-    let mut regions: Vec<(String, u32, u32, String, String, String)> = Vec::new();
+    let mut regions: Vec<Region> = Vec::new();
+
+    //let mut regions: Vec<(String, u32, u32, String, String, String)> = Vec::new();
+    let mut nonbed12: bool = false;
+
     for bed in bed_files {
         let entryname = Path::new(bed)
             .file_stem()
             .unwrap()
             .to_string_lossy()
             .into_owned();
-
+        
         let bedfile = BufReader::new(File::open(bed).unwrap());
         let mut entries: u32 = 0;
         for line in bedfile.lines() {
             let line = line.unwrap();
             let fields: Vec<&str> = line.split('\t').collect();
-            // If score and strand are not provided, we set them to .
-            let field_3 = fields.get(3).unwrap_or(&".").to_string();
-            let field_4 = fields.get(4).unwrap_or(&".").to_string();
-            regions.push(
-                (
-                    fields[0].to_string(), //chrom
-                    fields[1].parse().unwrap(), //start
-                    fields[2].parse().unwrap(), //end
-                    field_3, //score
-                    field_4, //strand
-                    entryname.to_string() //bedfile_name
-                )
-            );
+            // Depending on bedfile, we have either BED3, BED6 or BED12
+            // Note that this approach could allow somebody to have a 'mixed' bedfile, why not.
+            match fields.len() {
+                3 => {
+                    if !nonbed12 {
+                        nonbed12 = true;
+                    }
+                    let start = fields[1].parse().unwrap();
+                    let end = fields[2].parse().unwrap();
+                    regions.push(
+                        Region {
+                            chrom: fields[0].to_string(), //chrom
+                            start: Revalue::U(start), //start
+                            end: Revalue::U(end), //end
+                            score: ".".to_string(), //score
+                            strand: ".".to_string(), //score
+                            name: entryname.to_string(), //bedfile_name
+                            regionlength: end - start // regionlength
+                        }
+                    );
+                },
+                6 => {
+                    if !nonbed12 {
+                        nonbed12 = true;
+                    }
+                    let start = fields[1].parse().unwrap();
+                    let end = fields[2].parse().unwrap();
+                    regions.push(
+                        Region {
+                            chrom: fields[0].to_string(), //chrom
+                            start: Revalue::U(start), //start
+                            end: Revalue::U(end), //end
+                            score: ".".to_string(), //score
+                            strand: ".".to_string(), //score
+                            name: entryname.to_string(), //bedfile_name
+                            regionlength: end - start // regionlength
+                        }
+                    );
+                },
+                12 => {
+                    if metagene {                        
+                        let start: u32 = fields[1].parse().unwrap();
+                        let blocksizes: Vec<u32> = fields[10]
+                            .split(',')
+                            .filter(|x| !x.is_empty())
+                            .map(|x| x.parse().unwrap())
+                            .collect();
+                        let length: u32 = blocksizes.iter().sum();
+                        let blockstarts: Vec<u32> = fields[11]
+                            .split(',')
+                            .filter(|x| !x.is_empty())
+                            .map(|x| x.parse::<u32>().unwrap() + start)
+                            .collect();
+
+                        let (starts, ends) = blocksizes
+                            .into_iter()
+                            .zip(blockstarts.into_iter())
+                            .map(|(s, start)| (start, start + s))
+                            .into_iter()
+                            .unzip();
+                        regions.push(
+                            Region {
+                                chrom: fields[0].to_string(), //chrom
+                                start: Revalue::V(starts), //start
+                                end: Revalue::V(ends), //end
+                                score: fields[4].to_string(), //score
+                                strand: fields[5].to_string(), //score
+                                name: entryname.to_string(), //bedfile_name
+                                regionlength: length // regionlength
+                            }
+                        );
+                    } else {
+                        let start = fields[1].parse().unwrap();
+                        let end = fields[2].parse().unwrap();
+                        regions.push(
+                            Region {
+                                chrom: fields[0].to_string(), //chrom
+                                start: Revalue::U(start), //start
+                                end: Revalue::U(end), //end
+                                score: fields[4].to_string(), //score
+                                strand: fields[5].to_string(), //score
+                                name: entryname.to_string(), //bedfile_name
+                                regionlength: end - start // regionlength
+                            }
+                        );
+                    }
+                },
+                _ => panic!("Invalid BED format. BED file doesn't have 3, 6 or 12 fields."),
+            }
             entries += 1;
         }
         regionsizes.insert(entryname, entries);
+    }
+    if metagene && nonbed12 {
+        println!("Warning: Metagene analysis is requested, but not all bedfiles and/or bedfile entries are in BED12 format. Proceed at your own risk.");
     }
     return (regions, regionsizes);
 }
@@ -100,15 +183,18 @@ pub fn chrombounds_from_bw(bwfile: &str) -> HashMap<String, u32> {
 
 pub fn bwintervals(
     bwfile: &str,
-    regions: &Vec<(String, u32, u32, String, String, String)>,
-    slopregions: &Vec<Vec<(u32, u32)>>,
+    regions: &Vec<Region>,
+    slopregions: &Vec<Vec<Bin>>,
     scale_regions: &Scalingregions
 ) -> Vec<Vec<f32>> {
-    // For a given bw file, a vector of slop regions (where every vec entry is a vec of (start, end) tuples)
+    // For a given bw file, a vector of slopregions (Bin enum))
     // return a vector with for every region a vector of f64.
 
     // Make sure regions and slopregions are of equal length
-    assert_eq!(regions.len(), slopregions.len());
+    assert_eq!(
+        regions.len(), slopregions.len(),
+        "Regions from bed file and parsed regions (slopped) do not have equal length. Something went wrong during computation."
+    );
     
     // Define return vector, set up bw reader.
     let mut bwvals: Vec<Vec<f32>> = Vec::new();
@@ -116,17 +202,18 @@ pub fn bwintervals(
     let mut reader = BigWigRead::open(bwf).unwrap();
 
     // Iterate over regions and slopregions synchronously.
-    for (sls, (chrom, _,  _, _, _, _)) in slopregions.iter().zip(regions.iter()) {
+    for (sls, region) in slopregions.iter().zip(regions.iter()) {
         let mut bwval: Vec<f32> = Vec::new();
         // get 'min and max' to query
+        // at some point this should become an impl but man am I tired.
         let (min, max) = sls
             .iter()
-            .flat_map(|(x, y)| vec![*x, *y])
-            .filter(|&value| value != 0)
-            .minmax()
-            .into_option()
-            .expect("Vec is empty.");
-        let binvals = reader.get_interval(chrom, min as u32, max as u32).unwrap();
+            .flat_map(|bin| match bin {
+                Bin::Conbin(a, b) => vec![*a, *b],
+                Bin::Catbin(pairs) => pairs.iter().flat_map(|(x, y)| vec![*x, *y]).collect::<Vec<u32>>(),
+            })
+            .fold((u32::MAX, u32::MIN), |(min, max), x| (min.min(x), max.max(x)));
+        let binvals = reader.get_interval(&region.chrom, min as u32, max as u32).unwrap();
         // since binvals (can) be over binsizes, we expand them to bp and push them to a hashmap
         let mut bwhash: HashMap<u32, f32> = HashMap::new();
         for interval in binvals {
@@ -136,31 +223,64 @@ pub fn bwintervals(
             let val = interval.value as f32;
             bwhash.extend((start..end).map(|bp| (bp, val)));
         }
-        for (start, end) in sls {
-            if start == end && *end == 0 {
-                if scale_regions.missingdata_as_zero {
-                    bwval.push(0.0);
-                } else {
-                    bwval.push(std::f32::NAN);
+        // Now we can iterate over the slopped regions, and get the values from the hashmap.
+        for bin in sls {
+            match bin {
+                Bin::Conbin(a, b) => {
+                    if a == b && *b == 0 {
+                        if scale_regions.missingdata_as_zero {
+                            bwval.push(0.0);
+                        } else {
+                            bwval.push(std::f32::NAN);
+                        }
+                    } else {
+                        // Get values from the hashmap
+                        let vals: Vec<&f32> = (*a..*b)
+                            .filter_map(|bp| bwhash.get(&bp))
+                            .collect();
+                        let val = match scale_regions.avgtype.as_str() {
+                            "mean" => mean_float(vals),
+                            "median" => median_float(vals),
+                            "min" => min_float(vals),
+                            "max" => max_float(vals),
+                            "std" => std_float(vals),
+                            "sum" => sum_float(vals),
+                            _ => panic!("Unknown avgtype."),
+                        };
+                        bwval.push(val);
+                    }
+                },
+                Bin::Catbin(pairs) => {
+                    let mut vals: Vec<&f32> = Vec::new();
+
+                    for (start, end) in pairs {
+                        if start == end && *end == 0 {
+                            if scale_regions.missingdata_as_zero {
+                                vals.push(&0.0);
+                            } else {
+                                vals.push(&std::f32::NAN);
+                            }
+                        } else {
+                            // Get values from the hashmap
+                            (*start..*end)
+                                .filter_map(|bp| bwhash.get(&bp))
+                                .for_each(|v| vals.push(v));
+                        }
+                    }
+
+                    let val = match scale_regions.avgtype.as_str() {
+                        "mean" => mean_float(vals),
+                        "median" => median_float(vals),
+                        "min" => min_float(vals),
+                        "max" => max_float(vals),
+                        "std" => std_float(vals),
+                        "sum" => sum_float(vals),
+                        _ => panic!("Unknown avgtype."),
+                    };
+                    bwval.push(val);
                 }
-            } else {
-                // Get values from the hashmap
-                let vals: Vec<&f32> = (*start..*end)
-                    .filter_map(|bp| bwhash.get(&bp))
-                    .collect();
-                let val = match scale_regions.avgtype.as_str() {
-                    "mean" => mean_float(vals),
-                    "median" => median_float(vals),
-                    "min" => min_float(vals),
-                    "max" => max_float(vals),
-                    "std" => std_float(vals),
-                    "sum" => sum_float(vals),
-                    _ => panic!("Unknown avgtype."),
-                };
-                bwval.push(val);
             }
         }
-        // Make sure bwval is of expected length.
         assert_eq!(bwval.len(), scale_regions.cols_expected / scale_regions.bwfiles);
         bwvals.push(bwval);
     }
@@ -259,8 +379,13 @@ pub fn header_matrix(scale_regions: &Scalingregions, regionsizes: HashMap<String
     headstr
 }
 
-pub fn write_matrix(header: String, mat: Vec<Vec<f32>>, ofile: &str, regions: Vec<(String, u32, u32, String, String, String)>) {
-    println!("Writing out matrix to file.");
+pub fn write_matrix(
+    header: String,
+    mat: Vec<Vec<f32>>,
+    ofile: &str,
+    regions: Vec<Region>,
+    scale_regions: &Scalingregions
+) {
     // Write out the matrix to a compressed file.
     let omat = File::create(ofile).unwrap();
     let mut encoder = GzEncoder::new(omat, Compression::default());
@@ -268,19 +393,32 @@ pub fn write_matrix(header: String, mat: Vec<Vec<f32>>, ofile: &str, regions: Ve
     // Final check to make sure our regions and mat iter are of equal length.
     assert_eq!(regions.len(), mat.len());
     for (region, row) in regions.into_iter().zip(mat.into_iter()) {
+        // Skipping rules.
+        // skip_zeros
+        if scale_regions.skipzero && row.iter().all(|&x| x == 0.0) {
+            continue;
+        }
+        // min threshold
+        if scale_regions.minthresh != 0.0 && row.iter().any(|&x| x < scale_regions.minthresh) {
+            continue;
+        }
+        // max threshold
+        if scale_regions.maxthresh != 0.0 && row.iter().any(|&x| x > scale_regions.maxthresh) {
+            continue;
+        }
         let mut writerow = format!(
             "{}\t{}\t{}\t{}:{}-{}\t{}\t{}\t",
-            region.0,                // String field
-            region.1.to_string(),    // u64 field 1 converted to string
-            region.2.to_string(),    // u64 field 2 converted to string
-            region.0,                // Chrom field of chr:st-end
-            region.1.to_string(),    // st field of chr:st-end
-            region.2.to_string(),    // end field of chr:st-end
-            region.3,                // String field
-            region.4,                // String field
+            region.chrom,                // String field
+            region.start.to_string(),    // u64 field 1 converted to string
+            region.end.to_string(),    // u64 field 2 converted to string
+            region.chrom,                // Chrom field of chr:st-end
+            region.start.to_string(),    // st field of chr:st-end
+            region.end.to_string(),    // end field of chr:st-end
+            region.score,                // String field
+            region.strand,                // String field
         );
         writerow.push_str(
-            &row.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("\t")
+            &row.iter().map(|x| (scale_regions.scale * x).to_string()).collect::<Vec<String>>().join("\t")
         );
         writerow.push_str("\n");
         encoder.write_all(writerow.as_bytes()).unwrap();
