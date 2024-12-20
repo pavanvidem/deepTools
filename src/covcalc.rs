@@ -1,6 +1,5 @@
 use rust_htslib::bam::{self, Read, IndexedReader, record::Cigar};
 use std::collections::HashMap;
-use itertools::Itertools;
 use tempfile::{Builder, TempPath};
 use std::io::{BufWriter, Write};
 use std::cmp::min;

@@ -1,7 +1,6 @@
-use pyo3::exceptions::socket;
 use pyo3::prelude::*;
 use pyo3::types::PyList;
-use crate::filehandler::{read_bedfiles, chrombounds_from_bw, bwintervals, header_matrix, write_matrix};
+use crate::filehandler::{read_bedfile, read_gtffile, chrombounds_from_bw, bwintervals, header_matrix, write_matrix};
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
 use std::collections::HashMap;
@@ -13,7 +12,7 @@ use crate::calc::{mean_float, median_float, max_float, min_float, sum_float};
 #[pyfunction]
 pub fn r_computematrix(
     mode: &str,
-    bedlis: Py<PyList>,
+    regionlis: Py<PyList>,
     bwlis: Py<PyList>,
     sampleslabel: Py<PyList>,
     upstream: u32,
@@ -24,6 +23,9 @@ pub fn r_computematrix(
     binsize: u32,
     missingdatazero: bool,
     metagene: bool,
+    txnid: &str,
+    exonid: &str,
+    txniddesignator: &str,
     scale: f32, // scaling factor for writing out values. default is 1.0 (no scaling)
     nanafterend: bool, // end regions will treated as nans. Default is false.
     skipzeros: bool, // skip regions with all zeros. Default is false.
@@ -39,12 +41,12 @@ pub fn r_computematrix(
     ofile: &str
 ) -> PyResult<()> {
     // Extract the bed and bigwig files from pyList to Vec.
-    let mut bed_files: Vec<String> = Vec::new();
+    let mut region_files: Vec<String> = Vec::new();
     let mut bw_files: Vec<String> = Vec::new();
     let mut samples_label: Vec<String> = Vec::new();
     let mut sort_using_samples: Vec<u32> = Vec::new();
     Python::with_gil(|py| {
-        bed_files = bedlis.extract(py).expect("Failed to retrieve bed files.");
+        region_files = regionlis.extract(py).expect("Failed to retrieve bed files.");
         bw_files = bwlis.extract(py).expect("Failed to retrieve bigwig filess.");
         samples_label = sampleslabel.extract(py).expect("Failed to retrieve samples label.");
         sort_using_samples = sortusingsamples.extract(py).expect("Failed to retrieve the samples to sort on.");
@@ -61,14 +63,14 @@ pub fn r_computematrix(
     // compute number of columns
     let bpsum = &upstream + &downstream + &unscaled5prime + &unscaled3prime + &regionbodylength;
     // Get the 'basepaths' of the bed files to use as labels later on.
-    let mut bedlabels: Vec<String> = Vec::new();
-    for bed in bed_files.iter() {
+    let mut regionlabels: Vec<String> = Vec::new();
+    for bed in region_files.iter() {
         let entryname = Path::new(bed)
             .file_stem()
             .unwrap()
             .to_string_lossy()
             .into_owned();
-        bedlabels.push(entryname);
+        regionlabels.push(entryname);
     }
     if samples_label.is_empty() {
         // no samples labels provided via CLI, retrieve them from bigwig names.
@@ -102,27 +104,55 @@ pub fn r_computematrix(
         avgtype: averagetypebins.to_string(),
         verbose: verbose,
         proc_number: nproc,
-        bedlabels: bedlabels,
+        regionlabels: regionlabels,
         bwlabels: samples_label
     };
     if verbose {
-        println!("Bed files: {:?}", &bed_files);
+        println!("Region files: {:?}", &region_files);
         println!("Bigwig files: {:?}", &bw_files);
         println!("Samples labels: {:?}", scale_regions.bwlabels);
         println!("Sort using samples: {:?}", &sort_using_samples);
     }
+    let pool = ThreadPoolBuilder::new().num_threads(nproc).build().unwrap();
+    
     // Parse regions from bed files. Note that we retain the name of the bed file (in case there are more then 1)
     // Additionaly, score and strand are also retained, if it's a 3-column bed file we just fill in '.'
-    let (mut regions, regionsizes) = read_bedfiles(&bed_files, metagene);
+    let mut regions: Vec<Region> = Vec::new();
+    let mut regionsizes: HashMap<String, u32> = HashMap::new();
+
+    let gtfparse = Gtfparse {
+        metagene: metagene,
+        txnid: txnid.to_string(),
+        exonid: exonid.to_string(),
+        txniddesignator: txniddesignator.to_string(),
+    };
+
+    region_files.iter()
+        .map(|r| {
+            let ext = Path::new(r)
+                .extension()
+                .and_then(|e| e.to_str())
+                .map(|e| e.to_ascii_lowercase());
+
+            match ext {
+                Some(v) if v == "gtf".to_string() => read_gtffile(r, &gtfparse, chromsizes.keys().collect()),
+                Some(v) if v == "bed".to_string() => read_bedfile(r, metagene, chromsizes.keys().collect()),
+                _ => panic!("Only .bed and .gtf files are allowed as regions. File = {}, Extension = {:?}", r, ext),
+            }
+        })
+        .for_each(|(reg, regsize)| {
+            regions.extend(reg);
+            regionsizes.insert(regsize.0, regsize.1);
+        });
+    
+    // let (mut regions, regionsizes) = read_bedfiles(&bed_files, metagene);
     // Slop the regions
-    let pool = ThreadPoolBuilder::new().num_threads(nproc).build().unwrap();
+    
     let slopregions = pool.install(|| {
         regions.par_iter()
             .map(|region| slop_region(&region, &scale_regions, &chromsizes))
             .collect::<Vec<_>>()
     });
-    println!("Region lengths slopped: {:?}", slopregions.len());
-
     let mut matrix: Vec<Vec<f32>> = pool.install(|| {
         bw_files.par_iter()
             .map(|i| bwintervals(&i, &regions, &slopregions, &scale_regions))
@@ -287,6 +317,7 @@ fn slop_region(
 
     // chromosome end
     let chromend: u32 = *chromsizes.get(&region.chrom).unwrap();
+
     // Assert region stays within chromosome boundary.
     region.assert_end(chromend);
     // Get the anchorpoint per region.
@@ -315,14 +346,34 @@ pub struct Scalingregions {
     pub avgtype: String,
     pub verbose: bool,
     pub proc_number: usize,
-    pub bedlabels: Vec<String>,
+    pub regionlabels: Vec<String>,
     pub bwlabels: Vec<String>
+}
+
+#[derive(Clone)]
+pub struct Gtfparse {
+    pub metagene: bool,
+    pub txnid: String,
+    pub exonid: String,
+    pub txniddesignator: String,
 }
 
 #[derive(Clone)]
 pub enum Revalue {
     U(u32),
     V(Vec<u32>),
+}
+
+impl Revalue {
+    pub fn rewrites(&self) -> String {
+        match self {
+            Revalue::U(v) => format!("{}", v),
+            Revalue::V(vs) => vs.iter()
+                .map(|v| v.to_string())
+                .collect::<Vec<_>>()
+                .join(","),
+        }
+    }
 }
 
 impl fmt::Debug for Revalue {
@@ -349,7 +400,7 @@ pub enum Bin {
     Catbin(Vec<(u32, u32)>),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Region {
     pub chrom: String,
     pub start: Revalue,

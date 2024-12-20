@@ -26,3 +26,5 @@ Exactscaling is no longer an option, it's always performed.
  - sortUsing: mean, median, max, min, sum, region_length
  - averageTypeBins: mean, median, min, max ,std, sum
  - skipZeros
+ - duplicate renaming _r1, _r2, ...
+ - GTF, BED3, BED6, BED12, mixedBED (?)

@@ -1,4 +1,3 @@
-use bigtools::utils::misc::Name;
 use rust_htslib::bam::{Read, Reader};
 use itertools::Itertools;
 use std::io::{BufReader, BufWriter, Write};
@@ -7,12 +6,10 @@ use std::fs::File;
 use std::path::Path;
 use bigtools::{BigWigRead, BigWigWrite, Value};
 use bigtools::beddata::BedParserStreamingIterator;
-use bigtools::bed::bedparser::parse_bedgraph;
 use std::collections::HashMap;
 use flate2::write::GzEncoder;
 use flate2::Compression;
-use tempfile::{TempPath};
-use crate::computematrix::{Scalingregions, Revalue, Region, Bin};
+use crate::computematrix::{Scalingregions, Gtfparse, Revalue, Region, Bin};
 use crate::calc::{mean_float, median_float, min_float, max_float, sum_float, std_float};
 
 pub fn bam_ispaired(bam_ifile: &str) -> bool {
@@ -50,124 +47,297 @@ where
     }
 }
 
-pub fn read_bedfiles(bed_files: &Vec<String>, metagene: bool) -> (Vec<Region>, HashMap<String, u32>) {
-    // read all bedfiles in a Vec of strings (filepaths)
-    // returns a vec of Region
-    let mut regionsizes: HashMap<String, u32> = HashMap::new();
+pub fn read_gtffile(gtf_file: &String, gtfparse: &Gtfparse, chroms: Vec<&String>) -> (Vec<Region>, (String, u32)) {
+    // At some point this zoo of String clones should be refactored. Not now though, We have a deadline.
     let mut regions: Vec<Region> = Vec::new();
+    let mut names: HashMap<String, u32> = HashMap::new();
+    let mut entries: u32 = 0;
+    let mut txnids: Vec<String> = Vec::new();
 
-    //let mut regions: Vec<(String, u32, u32, String, String, String)> = Vec::new();
-    let mut nonbed12: bool = false;
+    let gtffile = BufReader::new(File::open(gtf_file).unwrap());
 
-    for bed in bed_files {
-        let entryname = Path::new(bed)
-            .file_stem()
-            .unwrap()
-            .to_string_lossy()
-            .into_owned();
-        
-        let bedfile = BufReader::new(File::open(bed).unwrap());
-        let mut entries: u32 = 0;
-        for line in bedfile.lines() {
+    if gtfparse.metagene {
+        // metagene implementation - more work here.
+        let mut txn_hash: HashMap<String, Vec<(u32, u32)>> = HashMap::new();
+        let mut txn_strand: HashMap<String, String> = HashMap::new();
+        let mut txn_chrom: HashMap<String, String> = HashMap::new();
+
+        for line in gtffile.lines() {
             let line = line.unwrap();
-            let fields: Vec<&str> = line.split('\t').collect();
-            // Depending on bedfile, we have either BED3, BED6 or BED12
-            // Note that this approach could allow somebody to have a 'mixed' bedfile, why not.
-            match fields.len() {
-                3 => {
-                    if !nonbed12 {
-                        nonbed12 = true;
-                    }
-                    let start = fields[1].parse().unwrap();
-                    let end = fields[2].parse().unwrap();
-                    regions.push(
-                        Region {
-                            chrom: fields[0].to_string(), //chrom
-                            start: Revalue::U(start), //start
-                            end: Revalue::U(end), //end
-                            score: ".".to_string(), //score
-                            strand: ".".to_string(), //score
-                            name: entryname.to_string(), //bedfile_name
-                            regionlength: end - start // regionlength
-                        }
-                    );
-                },
-                6 => {
-                    if !nonbed12 {
-                        nonbed12 = true;
-                    }
-                    let start = fields[1].parse().unwrap();
-                    let end = fields[2].parse().unwrap();
-                    regions.push(
-                        Region {
-                            chrom: fields[0].to_string(), //chrom
-                            start: Revalue::U(start), //start
-                            end: Revalue::U(end), //end
-                            score: ".".to_string(), //score
-                            strand: ".".to_string(), //score
-                            name: entryname.to_string(), //bedfile_name
-                            regionlength: end - start // regionlength
-                        }
-                    );
-                },
-                12 => {
-                    if metagene {                        
-                        let start: u32 = fields[1].parse().unwrap();
-                        let blocksizes: Vec<u32> = fields[10]
-                            .split(',')
-                            .filter(|x| !x.is_empty())
-                            .map(|x| x.parse().unwrap())
-                            .collect();
-                        let length: u32 = blocksizes.iter().sum();
-                        let blockstarts: Vec<u32> = fields[11]
-                            .split(',')
-                            .filter(|x| !x.is_empty())
-                            .map(|x| x.parse::<u32>().unwrap() + start)
-                            .collect();
-
-                        let (starts, ends) = blocksizes
-                            .into_iter()
-                            .zip(blockstarts.into_iter())
-                            .map(|(s, start)| (start, start + s))
-                            .into_iter()
-                            .unzip();
-                        regions.push(
-                            Region {
-                                chrom: fields[0].to_string(), //chrom
-                                start: Revalue::V(starts), //start
-                                end: Revalue::V(ends), //end
-                                score: fields[4].to_string(), //score
-                                strand: fields[5].to_string(), //score
-                                name: entryname.to_string(), //bedfile_name
-                                regionlength: length // regionlength
-                            }
-                        );
-                    } else {
-                        let start = fields[1].parse().unwrap();
-                        let end = fields[2].parse().unwrap();
-                        regions.push(
-                            Region {
-                                chrom: fields[0].to_string(), //chrom
-                                start: Revalue::U(start), //start
-                                end: Revalue::U(end), //end
-                                score: fields[4].to_string(), //score
-                                strand: fields[5].to_string(), //score
-                                name: entryname.to_string(), //bedfile_name
-                                regionlength: end - start // regionlength
-                            }
-                        );
-                    }
-                },
-                _ => panic!("Invalid BED format. BED file doesn't have 3, 6 or 12 fields."),
+            // skip comments
+            if line.starts_with('#') {
+                continue;
             }
-            entries += 1;
+            let fields: Vec<&str> = line.split('\t').collect();
+            if fields[2].to_string() == gtfparse.exonid {
+                let start = fields[3].parse().unwrap();
+                let end = fields[4].parse().unwrap();
+                let txnid = fields[8]
+                    .split(';')
+                    .find(|x| x.trim().starts_with(gtfparse.txniddesignator.as_str()))
+                    .and_then(|x| x.split('"').nth(1))
+                    .map(|s| s.to_string())
+                    .unwrap();
+                if !txnids.contains(&txnid) {
+                    txnids.push(txnid.clone());
+                }
+
+                let txnentry = txn_hash.entry(txnid.clone()).or_insert(Vec::new());
+                // Just to verify all exons are on the same strand.
+                if txn_strand.contains_key(&txnid) {
+                    assert_eq!(txn_strand.get(&txnid).unwrap(), fields[6]);
+                } else {
+                    txn_strand.insert(txnid.clone(), fields[6].to_string());
+                }
+                // Same for chromosome
+                if txn_chrom.contains_key(&txnid) {
+                    assert_eq!(txn_chrom.get(&txnid).unwrap(), fields[0]);
+                } else {
+                    txn_chrom.insert(txnid, fields[0].to_string());
+                }
+                txnentry.push((start, end));
+            }
         }
-        regionsizes.insert(entryname, entries);
+
+        for txnid in txnids.into_iter() {
+            
+            let txnentry = txn_hash.get_mut(&txnid).unwrap();
+            let length: u32 = txnentry.iter().map(|(s, e)| e - s).sum();
+            txnentry.sort_by(|a, b| a.0.cmp(&b.0));
+            let (starts, ends): (Vec<u32>, Vec<u32>) = txnentry.iter().map(|(s, e)| (*s, *e)).unzip();
+            let chrom = txn_chrom.get(&txnid).unwrap().to_string();
+
+            if !chroms.contains(&&chrom) {
+                println!("Warning, region {} not found in at least one of the bigwig files. Skipping these regions.", chrom);
+            } else {
+                regions.push(
+                    Region {
+                        chrom: txn_chrom.get(&txnid).unwrap().to_string(), //chrom
+                        start: Revalue::V(starts), //start
+                        end: Revalue::V(ends), //end
+                        score: ".".to_string(), //score
+                        strand: txn_strand.get(&txnid).unwrap().to_string(), // strand
+                        name: txnid.to_string(), 
+                        regionlength: length // regionlength
+                    }
+                );
+                entries += 1;
+            }
+        }
+    } else {
+        // Take fields with col 3 == gtfparse.txnid, start, end
+        for line in gtffile.lines() {
+            let line = line.unwrap();
+            // skip comments
+            if line.starts_with('#') {
+                continue;
+            }
+
+            let fields: Vec<&str> = line.split('\t').collect();
+            if fields[2].to_string() == gtfparse.txnid {
+                let start = fields[3].parse().unwrap();
+                let end = fields[4].parse().unwrap();
+                let mut entryname = fields[8]
+                    .split(';')
+                    .find(|x| x.trim().starts_with(gtfparse.txniddesignator.as_str()))
+                    .and_then(|x| x.split('"').nth(1))
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| format!("{}:{}-{}", fields[0], fields[1], fields[2]));
+                
+                if names.contains_key(&entryname) {
+                    let count = names.get_mut(&entryname).unwrap();
+                    *count += 1;
+                    entryname = format!("{}_r{}", entryname, count);
+                } else {
+                    names.insert(entryname.clone(), 0);
+                }
+
+                if !chroms.contains(&&fields[0].to_string()) {
+                    println!("Warning, region {} not found in at least one of the bigwig files. Skipping these regions.", fields[0]);
+                } else {
+                    regions.push(
+                        Region {
+                            chrom: fields[0].to_string(), //chrom
+                            start: Revalue::U(start), //start
+                            end: Revalue::U(end), //end
+                            score: fields[5].to_string(), //score
+                            strand: fields[6].to_string(), //strand
+                            name: entryname, //region name
+                            regionlength: end - start // regionlength
+                        }
+                    );
+                    entries += 1;
+                }
+            }
+        }
     }
+    let filename = Path::new(gtf_file)
+        .file_stem()
+        .unwrap()
+        .to_string_lossy()
+        .into_owned();
+
+    return (regions, (filename, entries));
+}
+
+pub fn read_bedfile(bed_file: &String, metagene: bool, chroms: Vec<&String>) -> (Vec<Region>, (String, u32)) {
+    // read a provided bed_file into a vec of Region
+    // Additional return is the filename and the number of entries (for sorting later on if needed).
+
+    let mut regions: Vec<Region> = Vec::new();
+    let mut names: HashMap<String, u32> = HashMap::new();
+    let mut nonbed12: bool = false;
+    let mut entries: u32 = 0;
+
+    let bedfile = BufReader::new(File::open(bed_file).unwrap());
+    
+    for line in bedfile.lines() {
+        let line = line.unwrap();
+        let fields: Vec<&str> = line.split('\t').collect();
+        // Depending on bedfile, we have either BED3, BED6 or BED12
+        // Note that this approach could allow somebody to have a 'mixed' bedfile, why not.
+        match fields.len() {
+            3 => {
+                if !nonbed12 {
+                    nonbed12 = true;
+                }
+                let chrom = fields[0];
+                if !chroms.contains(&&chrom.to_string()) {
+                    println!("Warning, region {} not found in at least one of the bigwig files. Skipping these regions.", chrom);
+                    continue;
+                }
+                let mut entryname = format!("{}:{}-{}", fields[0], fields[1], fields[2]);
+                if names.contains_key(&entryname) {
+                    let count = names.get_mut(&entryname).unwrap();
+                    *count += 1;
+                    entryname = format!("{}_r{}", entryname, count);
+                } else {
+                    names.insert(entryname.clone(), 0);
+                }
+                let start = fields[1].parse().unwrap();
+                let end = fields[2].parse().unwrap();
+                regions.push(
+                    Region {
+                        chrom: fields[0].to_string(), //chrom
+                        start: Revalue::U(start), //start
+                        end: Revalue::U(end), //end
+                        score: ".".to_string(), //score
+                        strand: ".".to_string(), //score
+                        name: entryname, //region name
+                        regionlength: end - start // regionlength
+                    }
+                );
+                entries += 1;
+            },
+            6 => {
+                if !nonbed12 {
+                    nonbed12 = true;
+                }
+                let chrom = fields[0];
+                if !chroms.contains(&&chrom.to_string()) {
+                    println!("Warning, region {} not found in at least one of the bigwig files. Skipping these regions.", chrom);
+                    continue;
+                }
+                let start = fields[1].parse().unwrap();
+                let end = fields[2].parse().unwrap();
+                let mut entryname = fields[3].to_string();
+                if names.contains_key(&entryname) {
+                    let count = names.get_mut(&entryname).unwrap();
+                    *count += 1;
+                    entryname = format!("{}_r{}", entryname, count);
+                } else {
+                    names.insert(entryname.clone(), 0);
+                }
+                regions.push(
+                    Region {
+                        chrom: fields[0].to_string(), //chrom
+                        start: Revalue::U(start), //start
+                        end: Revalue::U(end), //end
+                        score: ".".to_string(), //score
+                        strand: ".".to_string(), //score
+                        name: entryname, //region name
+                        regionlength: end - start // regionlength
+                    }
+                );
+                entries += 1;
+            },
+            12 => {
+                let chrom = fields[0];
+                if !chroms.contains(&&chrom.to_string()) {
+                    println!("Warning, region {} not found in at least one of the bigwig files. Skipping these regions.", chrom);
+                    continue;
+                }
+                let mut entryname = fields[3].to_string();
+                if names.contains_key(&entryname) {
+                    let count = names.get_mut(&entryname).unwrap();
+                    *count += 1;
+                    entryname = format!("{}_r{}", entryname, count);
+                } else {
+                    names.insert(entryname.clone(), 0);
+                }
+                if metagene {                        
+                    let start: u32 = fields[1].parse().unwrap();
+                    let blocksizes: Vec<u32> = fields[10]
+                        .split(',')
+                        .filter(|x| !x.is_empty())
+                        .map(|x| x.parse().unwrap())
+                        .collect();
+                    let length: u32 = blocksizes.iter().sum();
+                    let blockstarts: Vec<u32> = fields[11]
+                        .split(',')
+                        .filter(|x| !x.is_empty())
+                        .map(|x| x.parse::<u32>().unwrap() + start)
+                        .collect();
+
+                    let (starts, ends) = blocksizes
+                        .into_iter()
+                        .zip(blockstarts.into_iter())
+                        .map(|(s, start)| (start, start + s))
+                        .into_iter()
+                        .unzip();
+                    regions.push(
+                        Region {
+                            chrom: fields[0].to_string(), //chrom
+                            start: Revalue::V(starts), //start
+                            end: Revalue::V(ends), //end
+                            score: fields[4].to_string(), //score
+                            strand: fields[5].to_string(), //score
+                            name: entryname, //region name
+                            regionlength: length // regionlength
+                        }
+                    );
+                    entries += 1;
+                } else {
+                    let start = fields[1].parse().unwrap();
+                    let end = fields[2].parse().unwrap();
+                    regions.push(
+                        Region {
+                            chrom: fields[0].to_string(), //chrom
+                            start: Revalue::U(start), //start
+                            end: Revalue::U(end), //end
+                            score: fields[4].to_string(), //score
+                            strand: fields[5].to_string(), //score
+                            name: entryname, //region name
+                            regionlength: end - start // regionlength
+                        }
+                    );
+                    entries += 1;
+                }
+            },
+            _ => panic!("Invalid BED format. BED file doesn't have 3, 6 or 12 fields."),
+        }
+    }
+
+    let filename = Path::new(bed_file)
+        .file_stem()
+        .unwrap()
+        .to_string_lossy()
+        .into_owned();
+
     if metagene && nonbed12 {
         println!("Warning: Metagene analysis is requested, but not all bedfiles and/or bedfile entries are in BED12 format. Proceed at your own risk.");
     }
-    return (regions, regionsizes);
+    return (regions, (filename, entries));
 }
 
 pub fn chrombounds_from_bw(bwfile: &str) -> HashMap<String, u32> {
@@ -334,14 +504,14 @@ pub fn header_matrix(scale_regions: &Scalingregions, regionsizes: HashMap<String
         &format!("\"unscaled 3 prime\":[{}],", (0..scale_regions.bwfiles).map(|_| scale_regions.unscaled3prime).collect::<Vec<_>>().into_iter().join(","))
     );
     headstr.push_str(
-        &format!("\"group_labels\":[\"{}\"],", scale_regions.bedlabels.join("\",\""))
+        &format!("\"group_labels\":[\"{}\"],", scale_regions.regionlabels.join("\",\""))
     );
     // Get cumulative sizes of regions
     let mut groupbounds: Vec<u32> = Vec::new();
     groupbounds.push(0);
     let mut cumsum: u32 = 0;
-    for bedlabel in scale_regions.bedlabels.iter() {
-        cumsum += regionsizes.get(bedlabel).unwrap();
+    for regionlabel in scale_regions.regionlabels.iter() {
+        cumsum += regionsizes.get(regionlabel).unwrap();
         groupbounds.push(cumsum);
     }
     let groupbounds = format!("{}", groupbounds.iter()
@@ -407,15 +577,13 @@ pub fn write_matrix(
             continue;
         }
         let mut writerow = format!(
-            "{}\t{}\t{}\t{}:{}-{}\t{}\t{}\t",
-            region.chrom,                // String field
-            region.start.to_string(),    // u64 field 1 converted to string
-            region.end.to_string(),    // u64 field 2 converted to string
-            region.chrom,                // Chrom field of chr:st-end
-            region.start.to_string(),    // st field of chr:st-end
-            region.end.to_string(),    // end field of chr:st-end
-            region.score,                // String field
-            region.strand,                // String field
+            "{}\t{}\t{}\t{}\t{}\t{}\t",
+            region.chrom,                // Chromosome
+            region.start.rewrites(),     // Revalue for start (either u32, or Vec<u32>)
+            region.end.rewrites(),       // Revalue for end (either u32, or Vec<u32>)
+            region.name,                 // String field for name. Duplicates taken care of in read_bedfiles.
+            region.score,                // Score field persisted from bedfile
+            region.strand,               // Strand field persisted from bedfile
         );
         writerow.push_str(
             &row.iter().map(|x| (scale_regions.scale * x).to_string()).collect::<Vec<String>>().join("\t")

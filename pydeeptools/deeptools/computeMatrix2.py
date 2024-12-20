@@ -344,7 +344,10 @@ def process_args(args=None):
             sys.exit("\nUpstrean and downstream regions are both "
                      "set to 0. Nothing to output. Maybe you want to "
                      "use the scale-regions mode?\n")
-
+    if args.beforeRegionStartLength % args.binSize != 0:
+        sys.exit("\nThe --beforeRegionStartLength value must be a multiple of the --binSize value.")
+    if args.afterRegionStartLength % args.binSize != 0:
+        sys.exit("\nThe --afterRegionStartLength value must be a multiple of the --binSize value.")
     if not args.samplesLabel:
         args.samplesLabel = []
     if not args.sortUsingSamples:
@@ -394,6 +397,9 @@ def main(args=None):
         args.binSize,
         args.missingDataAsZero,
         args.keepExons, # --metagene or not.
+        args.transcriptID,
+        args.exonID,
+        args.transcript_id_designator,
         args.scale,
         args.nanAfterEnd,
         args.skipZeros,
