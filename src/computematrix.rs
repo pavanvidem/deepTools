@@ -11,21 +11,21 @@ use crate::calc::{mean_float, median_float, max_float, min_float, sum_float};
 
 #[pyfunction]
 pub fn r_computematrix(
-    mode: &str,
-    regionlis: Py<PyList>,
-    bwlis: Py<PyList>,
-    sampleslabel: Py<PyList>,
-    upstream: u32,
-    downstream: u32,
-    unscaled5prime: u32,
-    unscaled3prime: u32,
-    regionbodylength: u32,
-    binsize: u32,
-    missingdatazero: bool,
-    metagene: bool,
-    txnid: &str,
-    exonid: &str,
-    txniddesignator: &str,
+    mode: &str, // reference-point or scale-regions
+    regionlis: Py<PyList>, // python list of region files (bed or gtf)
+    bwlis: Py<PyList>, // python list of bigwig files
+    sampleslabel: Py<PyList>, // python list of sample labels, if empty, use bigwig file names.
+    upstream: u32, // upstream region to consider
+    downstream: u32, // downstream region to consider
+    unscaled5prime: u32, // unscaled region 5' of the anchorpoint, only used in scale-regions mode.
+    unscaled3prime: u32, // unscaled region 3' of the anchorpoint, only used in scale-regions mode.
+    regionbodylength: u32, // length of the region body (after scaling), only used in scale-regions mode.
+    binsize: u32, // binsize to use for the matrix
+    missingdatazero: bool, // Encode missing data as 0. Default is false (and will be encoded as NA).
+    metagene: bool, // If set, 'exons' are stitched together to form a metagene
+    txnid: &str, // transcript id to use when parsing GTF file
+    exonid: &str, // exon id to use when parsing GTF file
+    txniddesignator: &str, // designator to use when parsing GTF file
     scale: f32, // scaling factor for writing out values. default is 1.0 (no scaling)
     nanafterend: bool, // end regions will treated as nans. Default is false.
     skipzeros: bool, // skip regions with all zeros. Default is false.
@@ -35,10 +35,10 @@ pub fn r_computematrix(
     sortregions: &str, // either ascend, descend or keep. Default is keep (and ignores sortusing).
     sortusing: &str, // metric to sort on. Either mean median max min sum region_length. Default is mean.
     sortusingsamples: Py<PyList>, // list of samples to sort on. If empty, use all samples.
-    referencepoint: &str,
-    nproc: usize,
-    verbose: bool,
-    ofile: &str
+    referencepoint: &str, // reference point to use. Either TSS, TES or center. Default is TSS. Only used in reference-point mode.
+    nproc: usize, // number of threads.
+    verbose: bool, // verbose output.
+    ofile: &str // npz file to write to.
 ) -> PyResult<()> {
     // Extract the bed and bigwig files from pyList to Vec.
     let mut region_files: Vec<String> = Vec::new();
@@ -92,6 +92,7 @@ pub fn r_computematrix(
         regionbodylength: regionbodylength,
         binsize: binsize,
         cols_expected: ((bw_files.len() * bpsum as usize) / binsize as usize),
+        bpsum: bpsum,
         missingdata_as_zero: missingdatazero,
         scale: scale,
         nan_after_end: nanafterend,
@@ -107,6 +108,12 @@ pub fn r_computematrix(
         regionlabels: regionlabels,
         bwlabels: samples_label
     };
+    let gtfparse = Gtfparse {
+        metagene: metagene,
+        txnid: txnid.to_string(),
+        exonid: exonid.to_string(),
+        txniddesignator: txniddesignator.to_string(),
+    };
     if verbose {
         println!("Region files: {:?}", &region_files);
         println!("Bigwig files: {:?}", &bw_files);
@@ -119,14 +126,6 @@ pub fn r_computematrix(
     // Additionaly, score and strand are also retained, if it's a 3-column bed file we just fill in '.'
     let mut regions: Vec<Region> = Vec::new();
     let mut regionsizes: HashMap<String, u32> = HashMap::new();
-
-    let gtfparse = Gtfparse {
-        metagene: metagene,
-        txnid: txnid.to_string(),
-        exonid: exonid.to_string(),
-        txniddesignator: txniddesignator.to_string(),
-    };
-
     region_files.iter()
         .map(|r| {
             let ext = Path::new(r)
@@ -145,162 +144,44 @@ pub fn r_computematrix(
             regionsizes.insert(regsize.0, regsize.1);
         });
     
-    // let (mut regions, regionsizes) = read_bedfiles(&bed_files, metagene);
-    // Slop the regions
-    
-    let slopregions = pool.install(|| {
-        regions.par_iter()
-            .map(|region| slop_region(&region, &scale_regions, &chromsizes))
-            .collect::<Vec<_>>()
-    });
-    let mut matrix: Vec<Vec<f32>> = pool.install(|| {
-        bw_files.par_iter()
-            .map(|i| bwintervals(&i, &regions, &slopregions, &scale_regions))
-            .reduce(
-                || vec![vec![]; regions.len()],
-                |mut acc, vec_of_vecs| {
-                    for (i, inner_vec) in vec_of_vecs.into_iter().enumerate() {
-                        acc[i].extend(inner_vec);
-                    }
-                    acc
-                },
-            )
-    });
-    // Resort the matrix, if this is requested.
-    if sortregions != "keep" {
-        if verbose {
-            println!("Sorting output matrix with settings: sortRegions: {}, sortUsing {}", sortregions, sortusing);
-        }
-        // If sortusingsamples is set, we need a vector to subset the columns of interest
-        let mut cols_of_interest: Vec<usize> = Vec::new();
-        if !sort_using_samples.is_empty() {
-            for sample_ix in sort_using_samples.iter() {
-                // Note that sort_using_samples is assumed to be 1-index. Hence we need to subtract 1.
-                let start = (sample_ix - 1) * bpsum;
-                let end = start + bpsum;
-                cols_of_interest.extend(start as usize..end as usize);
-            }
-        }
-        let mut regionslices: Vec<(usize, usize)> = Vec::new();
-        let mut rstart: usize = 0;
-        let mut rend: usize = 0;
-        let mut lastregion = &regions[0].name;
-        for (ix, region) in regions.iter().enumerate() {
-            if region.name != *lastregion {
-                regionslices.push((rstart, rend));
-                rstart = ix;
-                rend = ix;
-                lastregion = &region.name;
-            }
-            rend = ix;
-        }
-        regionslices.push((rstart, rend));
-        let mut sortedix: Vec<usize> = Vec::new();
-        if sortusing == "region_length" {
-            if !sort_using_samples.is_empty() && verbose {
-                println!("Sort using samples is set ({:?}), but is not used when sorting on region_length. It is thus ignored.", sort_using_samples);
-            }
-            sortedix = regionslices
-                .iter()
-                .flat_map(|(start, end)| {
-                    let rslice = &regions[*start..*end+1];
-                    let tix = rslice
-                        .iter()
-                        .enumerate()
-                        .map(|(ix, region)| {
-                            (ix + *start, region.regionlength)
-                        })
-                        .collect::<Vec<_>>()
-                        .iter()
-                        .sorted_by(|ix, metric| ix.1.partial_cmp(&metric.1).unwrap())
-                        .map(|(ix, _)| *ix)
-                        .collect::<Vec<usize>>();
-                    match sortregions {
-                        "ascend" => tix,
-                        "descend" => tix.into_iter().rev().collect(),
-                        _ => panic!("If sortRegions is not keep, it should be either ascend or descend. Not {}", sortregions),
-                    }
-                })
-                .collect();
-        } else {
-            sortedix = regionslices
-                .iter()
-                .flat_map(|(start, end)| {
-                    let rslice = &matrix[*start..*end+1];
-                    let tix = rslice
-                        .iter()
-                        .enumerate()
-                        .map(|(ix, vals)| {
-                            let subset: Vec<_> = if cols_of_interest.is_empty() {
-                                vals.iter().collect()
-                            } else {
-                                cols_of_interest
-                                    .iter()
-                                    .filter_map(|&index| vals.get(index))  // `vec.get(index)` returns Option<&T>
-                                    .collect()
-                            };
-                            let metric = match sortusing {
-                                "mean" => mean_float(subset),
-                                "median" => median_float(subset),
-                                "max" => max_float(subset),
-                                "min" => min_float(subset),
-                                "sum" => sum_float(subset),
-                                _ => panic!("Sortusing should be either mean, median, max, min, sum or region_length. Not {}", sortusing),
-                            };
-                            (ix + *start, metric)
-                        })
-                        .collect::<Vec<_>>()
-                        .iter()
-                        .sorted_by(|ix, metric| ix.1.partial_cmp(&metric.1).unwrap())
-                        .map(|(ix, _)| *ix)
-                        .collect::<Vec<usize>>();
-                    match sortregions {
-                        "ascend" => tix,
-                        "descend" => tix.into_iter().rev().collect(),
-                        _ => panic!("If sortRegions is not keep, it should be either ascend or descend. Not {}", sortregions),
-                    }
-                })
-                .collect();
-            }
-        // assert sorted ix length == matrix length == regions length
-        assert_eq!(
-            sortedix.len(),
-            matrix.len(),
-            "Length of sorted indices does not match matrix length: {} != {}", sortedix.len(), matrix.len()
-        );
-        assert_eq!(
-            sortedix.len(),
-            regions.len(),
-            "Length of sorted indices does not match regions length: {} ! = {}", sortedix.len(), regions.len()
-        );
-        let mut sortedmatrix: Vec<Vec<f32>> = Vec::new();
-        let mut sortedregions: Vec<Region> = Vec::new();
-        // Reorder matrix & regions
-        sortedmatrix = sortedix
-            .iter()
-            .map(|ix| matrix[*ix].clone())
-            .collect();
-        sortedregions = sortedix
-            .into_iter()
-            .map(|ix| regions[ix].clone())
-            .collect();
-        write_matrix(
-            header_matrix(&scale_regions, regionsizes),
-            sortedmatrix,
-            ofile,
-            sortedregions,
-            &scale_regions
-        );
-    } else {
-        write_matrix(
-            header_matrix(&scale_regions, regionsizes),
-            matrix,
-            ofile,
-            regions,
-            &scale_regions
-        );
+    // Discriminate between reference-point and scale-regions mode.
+    match mode {
+        "reference-point" => {
+            let slopregions = pool.install(|| {
+                regions.par_iter()
+                    .map(|region| slop_region(&region, &scale_regions, &chromsizes))
+                    .collect::<Vec<_>>()
+            });
+            let mut matrix: Vec<Vec<f32>> = pool.install(|| {
+                bw_files.par_iter()
+                    .map(|i| bwintervals(&i, &regions, &slopregions, &scale_regions))
+                    .reduce(
+                        || vec![vec![]; regions.len()],
+                        |mut acc, vec_of_vecs| {
+                            for (i, inner_vec) in vec_of_vecs.into_iter().enumerate() {
+                                acc[i].extend(inner_vec);
+                            }
+                            acc
+                        },
+                    )
+            });
+            matrix_dump(
+                sortregions,
+                sortusing,
+                sort_using_samples,
+                regions,
+                matrix, 
+                scale_regions,
+                regionsizes,
+                ofile,
+                verbose
+            );
+        },
+        "scale-regions" => {
+            println!("Implementing scale-regions hihi");
+        },
+        _ => panic!("Mode should be either reference-point or scale-regions. {} is not supported.", mode),
     }
-    
     Ok(())
 }
 
@@ -334,6 +215,7 @@ pub struct Scalingregions {
     pub regionbodylength: u32,
     pub binsize: u32,
     pub cols_expected: usize,
+    pub bpsum: u32,
     pub missingdata_as_zero: bool,
     pub scale: f32,
     pub nan_after_end: bool,
@@ -839,5 +721,154 @@ fn refpoint_exonwalker(exons: &Vec<(u32, u32)>, anchor: u32, binsize: u32, chrom
                 }
             }
         }
+    }
+}
+
+
+fn matrix_dump(
+    sortregions: &str,
+    sortusing: &str,
+    sort_using_samples: Vec<u32>,
+    regions: Vec<Region>,
+    matrix: Vec<Vec<f32>>,
+    scale_regions: Scalingregions,
+    regionsizes: HashMap<String, u32>,
+    ofile: &str,
+    verbose: bool
+) {
+    // Takes a pre-computed matrix, resorts it if requested, and writes it to file.
+    // Resort the matrix, if this is requested.
+    if sortregions != "keep" {
+        if verbose {
+            println!("Sorting output matrix with settings: sortRegions: {}, sortUsing {}", sortregions, sortusing);
+        }
+        // If sortusingsamples is set, we need a vector to subset the columns of interest
+        let mut cols_of_interest: Vec<usize> = Vec::new();
+        if !sort_using_samples.is_empty() {
+            for sample_ix in sort_using_samples.iter() {
+                // Note that sort_using_samples is assumed to be 1-index. Hence we need to subtract 1.
+                let start = (sample_ix - 1) * scale_regions.bpsum;
+                let end = start + scale_regions.bpsum;
+                cols_of_interest.extend(start as usize..end as usize);
+            }
+        }
+        let mut regionslices: Vec<(usize, usize)> = Vec::new();
+        let mut rstart: usize = 0;
+        let mut rend: usize = 0;
+        let mut lastregion = &regions[0].name;
+        for (ix, region) in regions.iter().enumerate() {
+            if region.name != *lastregion {
+                regionslices.push((rstart, rend));
+                rstart = ix;
+                rend = ix;
+                lastregion = &region.name;
+            }
+            rend = ix;
+        }
+        regionslices.push((rstart, rend));
+        let mut sortedix: Vec<usize> = Vec::new();
+        if sortusing == "region_length" {
+            if !sort_using_samples.is_empty() && verbose {
+                println!("Sort using samples is set ({:?}), but is not used when sorting on region_length. It is thus ignored.", sort_using_samples);
+            }
+            sortedix = regionslices
+                .iter()
+                .flat_map(|(start, end)| {
+                    let rslice = &regions[*start..*end+1];
+                    let tix = rslice
+                        .iter()
+                        .enumerate()
+                        .map(|(ix, region)| {
+                            (ix + *start, region.regionlength)
+                        })
+                        .collect::<Vec<_>>()
+                        .iter()
+                        .sorted_by(|ix, metric| ix.1.partial_cmp(&metric.1).unwrap())
+                        .map(|(ix, _)| *ix)
+                        .collect::<Vec<usize>>();
+                    match sortregions {
+                        "ascend" => tix,
+                        "descend" => tix.into_iter().rev().collect(),
+                        _ => panic!("If sortRegions is not keep, it should be either ascend or descend. Not {}", sortregions),
+                    }
+                })
+                .collect();
+        } else {
+            sortedix = regionslices
+                .iter()
+                .flat_map(|(start, end)| {
+                    let rslice = &matrix[*start..*end+1];
+                    let tix = rslice
+                        .iter()
+                        .enumerate()
+                        .map(|(ix, vals)| {
+                            let subset: Vec<_> = if cols_of_interest.is_empty() {
+                                vals.iter().collect()
+                            } else {
+                                cols_of_interest
+                                    .iter()
+                                    .filter_map(|&index| vals.get(index))  // `vec.get(index)` returns Option<&T>
+                                    .collect()
+                            };
+                            let metric = match sortusing {
+                                "mean" => mean_float(subset),
+                                "median" => median_float(subset),
+                                "max" => max_float(subset),
+                                "min" => min_float(subset),
+                                "sum" => sum_float(subset),
+                                _ => panic!("Sortusing should be either mean, median, max, min, sum or region_length. Not {}", sortusing),
+                            };
+                            (ix + *start, metric)
+                        })
+                        .collect::<Vec<_>>()
+                        .iter()
+                        .sorted_by(|ix, metric| ix.1.partial_cmp(&metric.1).unwrap())
+                        .map(|(ix, _)| *ix)
+                        .collect::<Vec<usize>>();
+                    match sortregions {
+                        "ascend" => tix,
+                        "descend" => tix.into_iter().rev().collect(),
+                        _ => panic!("If sortRegions is not keep, it should be either ascend or descend. Not {}", sortregions),
+                    }
+                })
+                .collect();
+            }
+        // assert sorted ix length == matrix length == regions length
+        assert_eq!(
+            sortedix.len(),
+            matrix.len(),
+            "Length of sorted indices does not match matrix length: {} != {}", sortedix.len(), matrix.len()
+        );
+        assert_eq!(
+            sortedix.len(),
+            regions.len(),
+            "Length of sorted indices does not match regions length: {} ! = {}", sortedix.len(), regions.len()
+        );
+        let mut sortedmatrix: Vec<Vec<f32>> = Vec::new();
+        let mut sortedregions: Vec<Region> = Vec::new();
+        // Reorder matrix & regions
+        sortedmatrix = sortedix
+            .iter()
+            .map(|ix| matrix[*ix].clone())
+            .collect();
+        sortedregions = sortedix
+            .into_iter()
+            .map(|ix| regions[ix].clone())
+            .collect();
+        write_matrix(
+            header_matrix(&scale_regions, regionsizes),
+            sortedmatrix,
+            ofile,
+            sortedregions,
+            &scale_regions
+        );
+    } else {
+        write_matrix(
+            header_matrix(&scale_regions, regionsizes),
+            matrix,
+            ofile,
+            regions,
+            &scale_regions
+        );
     }
 }
