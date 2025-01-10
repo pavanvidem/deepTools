@@ -429,41 +429,50 @@ impl Region {
                 bodybins.extend(self.scale_regionbody(scale_regions, chromend));
             }
         }
+
         // Get flanking regions.
         // Note that we still need to deal with exon - non-exon as reference-point mode could require metagene walks.
         match self.strand.as_str() {
             "+" | "." => {
                 match (&self.start, &self.end) {
                     (Revalue::U(start), Revalue::U(end)) => {
-                        // simplest scenario,
-                        let mut bodyjump: bool = false;
-                        let mut absstart: i32 = anchorstart as i32 - scale_regions.upstream as i32;
-                        let absstop: i32 = anchorstop as i32 + scale_regions.downstream as i32;
-                        while absstart < absstop {
-                            let bin = absstart + scale_regions.binsize as i32;
-                            if absstart < 0 || absstart as u32 >= chromend || bin as u32 >= chromend {
-                                bins.push(Bin::Conbin(0,0));
+                        let mut leftbins: Vec<Bin> = Vec::new();
+                        let mut rightbins: Vec<Bin> = Vec::new();
+
+                        let mut absstart: i64 = anchorstart as i64 - scale_regions.upstream as i64;
+                        let absstop: i64 = anchorstop as i64 + scale_regions.downstream as i64;
+
+                        for binix in (absstart..anchorstart as i64).step_by(scale_regions.binsize as usize) {
+                            if binix < 0 || binix as u32 >= chromend || (binix + scale_regions.binsize as i64) as u32 >= chromend {
+                                leftbins.push(Bin::Conbin(0,0));
+                            } else if scale_regions.nan_after_end && binix as u32 <= *start  {
+                                leftbins.push(Bin::Conbin(0,0));
                             } else {
-                                // If we reached end of region, and nan_after_end is true, push (0,0)
-                                if scale_regions.nan_after_end && absstart as u32 >= *end {
-                                    bins.push(Bin::Conbin(0,0));
-                                // accomodate zeroasNan too ?
-                                } else {
-                                    bins.push(Bin::Conbin(absstart as u32, bin as u32));
-                                }
+                                leftbins.push(Bin::Conbin(binix as u32, (binix as u32) + scale_regions.binsize));
                             }
-                            if !bodyjump && bin >= anchorstop as i32 {
-                                bodyjump = true;
-                                // if we have bodybins, this is the time to include them.
-                                for bin in bodybins.into_iter() {
-                                    bins.push(bin);
-                                }
-                                // Since we consume bodybins here (safe to say we do not needs this anymore as they are other match arms), this needs to be 'reset' as due to scope.
-                                bodybins = Vec::new();
-                                absstart = anchorstop as i32;
+                        }
+
+                        for binix in (anchorstop as i64..absstop).step_by(scale_regions.binsize as usize) {
+                            if binix < 0 || binix as u32 >= chromend || (binix + scale_regions.binsize as i64) as u32 >= chromend {
+                                rightbins.push(Bin::Conbin(0,0));
+                            } else if scale_regions.nan_after_end && binix as u32 >= *end {
+                                rightbins.push(Bin::Conbin(0,0));
                             } else {
-                                absstart = bin;
+                                rightbins.push(Bin::Conbin(binix as u32, (binix as u32) + scale_regions.binsize));
                             }
+                        }
+                        
+                        for bin in leftbins.into_iter() {
+                            bins.push(bin);
+                        }
+                        // If we have bodybins, they should be squeezed in here.
+                        for bin in bodybins.into_iter() {
+                            bins.push(bin);
+                        }
+                        // Reset bodybins, as they are consumed.
+                        bodybins = Vec::new();
+                        for bin in rightbins.into_iter() {
+                            bins.push(bin);
                         }
                     }
                     (Revalue::V(start), Revalue::V(end)) => {
@@ -536,33 +545,50 @@ impl Region {
             "-" => {
                 match (&self.start, &self.end) {
                     (Revalue::U(start), Revalue::U(end)) => {
-                        // Still simple scenario, we just gotta walk the other way.
-                        let mut bodyjump: bool = false;
-                        let mut absstart: i32 = anchorstop as i32 + scale_regions.upstream as i32;
-                        let absstop: i32 = anchorstart as i32 - scale_regions.downstream as i32;
-                        while absstart > absstop {
-                            let bin = absstart - scale_regions.binsize as i32;
-                            if absstart as u32 > chromend || bin < 0 {
-                                bins.push(Bin::Conbin(0,0));
+                        let mut leftbins: Vec<Bin> = Vec::new();
+                        let mut rightbins: Vec<Bin> = Vec::new();
+
+                        let mut absstart: i64 = anchorstop as i64 + scale_regions.upstream as i64;
+                        let absstop: i64 = anchorstart as i64 - scale_regions.downstream as i64;
+
+                        let steps: Vec<_> = (anchorstop as i64..absstart)
+                            .step_by(scale_regions.binsize as usize)
+                            .collect();
+                        for binix in steps.into_iter().rev() {
+                            if binix as u32 > chromend || (binix + scale_regions.binsize as i64) as u32 > chromend {
+                                rightbins.push(Bin::Conbin(0,0));
+                            } else if scale_regions.nan_after_end && binix as u32 >= *end {
+                                leftbins.push(Bin::Conbin(0,0));
                             } else {
-                                if scale_regions.nan_after_end && absstart as u32 <= *end {
-                                    bins.push(Bin::Conbin(0,0));
-                                } else {
-                                    // Push in the opposite direction so we walk backwards, but the interval is positive.
-                                    bins.push(Bin::Conbin(bin as u32, absstart as u32));
-                                }
+                                leftbins.push(Bin::Conbin(binix as u32, (binix as u32) + scale_regions.binsize));
                             }
-                            if !bodyjump && bin <= anchorstart as i32 {
-                                bodyjump = true;
-                                bodybins.reverse();
-                                for bin in bodybins.into_iter() {
-                                    bins.push(bin);
-                                }
-                                bodybins = Vec::new();
-                                absstart = anchorstart as i32;
+                        }
+                        
+                        let steps: Vec<_> = (absstop..anchorstart as i64)
+                            .step_by(scale_regions.binsize as usize)
+                            .collect();
+                        for binix in steps.into_iter().rev() {
+                            if binix < 0 {
+                                leftbins.push(Bin::Conbin(0,0));
+                            } else if scale_regions.nan_after_end && binix as u32 + scale_regions.binsize <= *start {
+                                rightbins.push(Bin::Conbin(0,0));
                             } else {
-                                absstart = bin;
+                                rightbins.push(Bin::Conbin(binix as u32, (binix as u32) + scale_regions.binsize));
                             }
+                        }
+                        
+                        for bin in rightbins.into_iter() {
+                            bins.push(bin);
+                        }
+                        // If we have bodybins, they should be squeezed in here.
+                        bodybins.reverse();
+                        for bin in bodybins.into_iter() {
+                            bins.push(bin);
+                        }
+                        // Reset bodybins, as they are consumed.
+                        bodybins = Vec::new();
+                        for bin in leftbins.into_iter() {
+                            bins.push(bin);
                         }
                     }
                     (Revalue::V(start), Revalue::V(end)) => {
@@ -804,6 +830,7 @@ impl Region {
                             .map(|x| binmap.get(&x).unwrap().clone())
                             .into_iter()
                             .collect::<Vec<Bin>>();
+
                         // Combine the vectors and return
                         let mut combined_bins = Vec::new();
                         if scale_regions.unscaled5prime > 0 {
@@ -823,7 +850,6 @@ impl Region {
                     (Revalue::U(start), Revalue::U(end)) => {
                         // No exons, negative strand. divide start  - end as such:
                         // |---un3prime---|---bodylength---|---un5prime---|
-                        println!("NEGATIVE MODE");
                         let mut un5bins: Vec<Bin> = Vec::new();
                         let mut un3bins: Vec<Bin> = Vec::new();
                         let mut innerbins: Vec<Bin> = Vec::new();
