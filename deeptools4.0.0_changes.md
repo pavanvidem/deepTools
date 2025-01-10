@@ -21,7 +21,6 @@ Exactscaling is no longer an option, it's always performed.
 # Testing
  
 ## computeMatrix
-### reference-point
  - referencePoint: TSS, center, TES
  - sortRegions: descend, ascend, keep
  - sortUsing: mean, median, max, min, sum, region_length
@@ -29,3 +28,4 @@ Exactscaling is no longer an option, it's always performed.
  - skipZeros
  - duplicate renaming _r1, _r2, ...
  - GTF, BED3, BED6, BED12, mixedBED (?)
+ - scaleRegions, un5, un3, regionbodylength, metagene
