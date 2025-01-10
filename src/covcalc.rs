@@ -1,9 +1,7 @@
 use rust_htslib::bam::{self, Read, IndexedReader, record::Cigar};
 use std::collections::HashMap;
-use std::fs::File;
-use itertools::Itertools;
-use tempfile::{Builder, NamedTempFile, TempPath};
-use std::io::{BufReader, BufWriter, Write};
+use tempfile::{Builder, TempPath};
+use std::io::{BufWriter, Write};
 use std::cmp::min;
 
 pub fn parse_regions(regions: &Vec<(String, u32, u32)>, bam_ifile: &str) -> (Vec<(String, u32, u32)>, HashMap<String, u32>) {
@@ -62,7 +60,7 @@ pub fn bam_pileup<'a>(
     binsize: &u32,
     ispe: &bool,
     ignorechr: &Vec<String>,
-    filters: &alignmentfilters,
+    filters: &Alignmentfilters,
     collapse: bool,
 ) -> (
     Vec<TempPath>, // temp bedgraph file.
@@ -343,7 +341,7 @@ fn bam_blocks(rec: bam::Record) -> Vec<(u32, u32)> {
     return blocks;
 }
 
-pub struct alignmentfilters {
+pub struct Alignmentfilters {
     pub minmappingquality: u8,
     pub samflaginclude: u16,
     pub samflagexclude: u16,

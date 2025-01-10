@@ -1,19 +1,121 @@
 pub fn median(mut nvec: Vec<u32>) -> f32 {
     if nvec.is_empty() {
-        return 0.0;
+        0.0
     } else if nvec.len() == 1 {
-        return nvec[0] as f32;
+        nvec[0] as f32
     } else {
         nvec.sort_unstable();
         let len = nvec.len();
         if len % 2 == 1 {
-            return nvec[len / 2] as f32;
+            nvec[len / 2] as f32
         } else {
-            return (nvec[len / 2] + nvec[len / 2 - 1]) as f32 / 2.0;
+            (nvec[len / 2] + nvec[len / 2 - 1]) as f32 / 2.0
         }
     }
 }
 
+pub fn mean_float(fvec: Vec<&f32>) -> f32 {
+    let valid_floats: Vec<f32> = fvec
+        .into_iter()
+        .cloned()
+        .filter(|v| v.is_finite())
+        .collect();
+    if valid_floats.is_empty() {
+        0.0
+    } else {
+        valid_floats.iter().sum::<f32>() / valid_floats.len() as f32
+    }
+}
+
+pub fn median_float(fvec: Vec<&f32>) -> f32 {
+    let mut valid_floats: Vec<f32> = fvec
+        .into_iter()
+        .cloned()
+        .filter(|v| v.is_finite())
+        .collect();
+    if valid_floats.is_empty() {
+        0.0
+    } else {
+        valid_floats.sort_by(
+            |a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)
+        );
+        let len = valid_floats.len();
+        if len % 2 == 1 {
+            valid_floats[len / 2]
+        } else {
+            (valid_floats[len / 2] + valid_floats[len / 2 - 1]) / 2.0
+        }
+    }
+}
+
+pub fn min_float(fvec: Vec<&f32>) -> f32 {
+    let valid_floats: Vec<f32> = fvec
+        .into_iter()
+        .cloned()
+        .filter(|v| v.is_finite())
+        .collect();
+    if valid_floats.is_empty() {
+        0.0
+    } else {
+        valid_floats
+            .iter()
+            .cloned()
+            .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Greater))
+            .unwrap_or(0.0)
+    }
+}
+
+pub fn max_float(fvec: Vec<&f32>) -> f32 {
+    let valid_floats: Vec<f32> = fvec
+        .into_iter()
+        .cloned()
+        .filter(|v| v.is_finite())
+        .collect();
+    if valid_floats.is_empty() {
+        0.0
+    } else {
+        valid_floats
+            .iter()
+            .cloned()
+            .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Greater))
+            .unwrap_or(0.0)
+    }
+}
+
+pub fn sum_float(fvec: Vec<&f32>) -> f32 {
+    let valid_floats: Vec<f32> = fvec
+        .into_iter()
+        .cloned()
+        .filter(|v| v.is_finite())
+        .collect();
+    if valid_floats.is_empty() {
+        0.0
+    } else {
+        valid_floats.iter().copied().sum::<f32>()
+    }
+}
+
+pub fn std_float(fvec: Vec<&f32>) -> f32 {
+    let valid_floats: Vec<f32> = fvec
+        .into_iter()
+        .cloned()
+        .filter(|v| v.is_finite())
+        .collect();
+    if valid_floats.is_empty() {
+        0.0
+    } else {
+        let n = valid_floats.len() as f32;
+        let mean = valid_floats.iter().copied().sum::<f32>() / n;
+        let stdsum = valid_floats
+            .iter()
+            .copied()
+            .map(|val| (val - mean).powi(2) as f64)  // Squared difference from mean
+            .sum::<f64>();
+        let stdsumnorm = stdsum / (n - 1.0) as f64;
+        let stdsumnormsqrt = stdsumnorm.sqrt();
+        stdsumnormsqrt as f32
+    }
+}
 
 pub fn calc_ratio(
     cov1: f32,

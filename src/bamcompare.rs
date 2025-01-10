@@ -8,10 +8,10 @@ use std::fs::File;
 use itertools::Itertools;
 use bigtools::{Value};
 use crate::filehandler::{bam_ispaired, write_covfile};
-use crate::covcalc::{bam_pileup, parse_regions, alignmentfilters};
+use crate::covcalc::{bam_pileup, parse_regions, Alignmentfilters};
 use crate::normalization::scale_factor_bamcompare;
 use crate::calc::{median, calc_ratio};
-use tempfile::{NamedTempFile, TempPath};
+use tempfile::{TempPath};
 
 #[pyfunction]
 pub fn r_bamcompare(
@@ -51,7 +51,7 @@ pub fn r_bamcompare(
         ignorechr = _ignorechr.extract(py).expect("Failed to retrieve ignorechr.");
     });
     // Set alignment filters
-    let filters = alignmentfilters {
+    let filters = Alignmentfilters {
         minmappingquality: minmappingquality,
         samflaginclude: samflaginclude,
         samflagexclude: samflagexclude,

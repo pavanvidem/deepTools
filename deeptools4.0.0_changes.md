@@ -1,11 +1,10 @@
-# Counting
+# computeMatrix
 
-Counting reads has slightly changed.  
-for -bs 1, the counting mechanism remains the same.  
-for -bs > 1, a read is split in multiple contiguous blocks  
-  - multiple blocks in 1 bin only count as 1  
-  - multiple blocks in multiple bins count as 1 per bin  
-  - one block spanning multiple bins counts as 1 in each bin  
+ - --sortRegions 'no' option no longer exists
+ - Sorting ascend / descend no longer has subsorting by position.
+ - --quiet / -q option no longer exists.
+ - bed files in computeMatrix no longer support '#' to define groups.
+ - 'chromosome matching' i.e. chr1 <-> 1, chrMT <-> MT is no longer performed.
 
 # normalization
 
@@ -15,4 +14,18 @@ Exactscaling is no longer an option, it's always performed.
 
  - allow multithreaded bw writing
  - properly divide region work over threads -> region sorting & taking size into account
+ - calc for computeMatrix functions -> Struct / Enum
+ - filehanlder bed file could all be &str, not clones
+
+
+# Testing
  
+## computeMatrix
+ - referencePoint: TSS, center, TES
+ - sortRegions: descend, ascend, keep
+ - sortUsing: mean, median, max, min, sum, region_length
+ - averageTypeBins: mean, median, min, max ,std, sum
+ - skipZeros
+ - duplicate renaming _r1, _r2, ...
+ - GTF, BED3, BED6, BED12, mixedBED (?)
+ - scaleRegions, un5, un3, regionbodylength, metagene
