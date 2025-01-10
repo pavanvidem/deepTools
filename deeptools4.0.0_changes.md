@@ -4,6 +4,7 @@
  - Sorting ascend / descend no longer has subsorting by position.
  - --quiet / -q option no longer exists.
  - bed files in computeMatrix no longer support '#' to define groups.
+ - 'chromosome matching' i.e. chr1 <-> 1, chrMT <-> MT is no longer performed.
 
 # normalization
 

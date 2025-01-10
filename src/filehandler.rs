@@ -108,7 +108,7 @@ pub fn read_gtffile(gtf_file: &String, gtfparse: &Gtfparse, chroms: Vec<&String>
             let chrom = txn_chrom.get(&txnid).unwrap().to_string();
 
             if !chroms.contains(&&chrom) {
-                println!("Warning, region {} not found in at least one of the bigwig files. Skipping these regions.", chrom);
+                println!("Warning, region {} not found in at least one of the bigwig files. Skipping {}.", chrom, txnid);
             } else {
                 regions.push(
                     Region {
@@ -153,7 +153,7 @@ pub fn read_gtffile(gtf_file: &String, gtfparse: &Gtfparse, chroms: Vec<&String>
                 }
 
                 if !chroms.contains(&&fields[0].to_string()) {
-                    println!("Warning, region {} not found in at least one of the bigwig files. Skipping these regions.", fields[0]);
+                    println!("Warning, region {} not found in at least one of the bigwig files. Skipping {}.", fields[0], entryname);
                 } else {
                     regions.push(
                         Region {
@@ -202,11 +202,11 @@ pub fn read_bedfile(bed_file: &String, metagene: bool, chroms: Vec<&String>) -> 
                     nonbed12 = true;
                 }
                 let chrom = fields[0];
+                let mut entryname = format!("{}:{}-{}", fields[0], fields[1], fields[2]);
                 if !chroms.contains(&&chrom.to_string()) {
-                    println!("Warning, region {} not found in at least one of the bigwig files. Skipping these regions.", chrom);
+                    println!("Warning, region {} not found in at least one of the bigwig files. Skipping {}.", chrom, entryname);
                     continue;
                 }
-                let mut entryname = format!("{}:{}-{}", fields[0], fields[1], fields[2]);
                 if names.contains_key(&entryname) {
                     let count = names.get_mut(&entryname).unwrap();
                     *count += 1;
@@ -234,13 +234,13 @@ pub fn read_bedfile(bed_file: &String, metagene: bool, chroms: Vec<&String>) -> 
                     nonbed12 = true;
                 }
                 let chrom = fields[0];
+                let mut entryname = fields[3].to_string();
                 if !chroms.contains(&&chrom.to_string()) {
-                    println!("Warning, region {} not found in at least one of the bigwig files. Skipping these regions.", chrom);
+                    println!("Warning, region {} not found in at least one of the bigwig files. Skipping {}.", chrom, entryname);
                     continue;
                 }
                 let start = fields[1].parse().unwrap();
                 let end = fields[2].parse().unwrap();
-                let mut entryname = fields[3].to_string();
                 if names.contains_key(&entryname) {
                     let count = names.get_mut(&entryname).unwrap();
                     *count += 1;
@@ -263,11 +263,11 @@ pub fn read_bedfile(bed_file: &String, metagene: bool, chroms: Vec<&String>) -> 
             },
             12 => {
                 let chrom = fields[0];
+                let mut entryname = fields[3].to_string();
                 if !chroms.contains(&&chrom.to_string()) {
-                    println!("Warning, region {} not found in at least one of the bigwig files. Skipping these regions.", chrom);
+                    println!("Warning, region {} not found in at least one of the bigwig files. Skipping {}.", chrom, entryname);
                     continue;
                 }
-                let mut entryname = fields[3].to_string();
                 if names.contains_key(&entryname) {
                     let count = names.get_mut(&entryname).unwrap();
                     *count += 1;

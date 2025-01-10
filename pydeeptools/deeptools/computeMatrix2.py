@@ -337,7 +337,7 @@ def process_args(args=None):
 
     if args.command == 'scale-regions':
         args.nanAfterEnd = False
-        args.referencePoint = None
+        args.referencePoint = ""
     elif args.command == 'reference-point':
         if args.beforeRegionStartLength == 0 and \
                 args.afterRegionStartLength == 0:
@@ -383,7 +383,6 @@ def main(args=None):
                   'unscaled 3 prime': args.unscaled3prime
                   }
     # Assert all  regions and scores exist
-    #print(args)
     r_computematrix(
         args.command,
         args.regionsFileName,

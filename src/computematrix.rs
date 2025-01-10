@@ -7,7 +7,9 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::fmt;
 use itertools::Itertools;
+use ndarray::Array1;
 use crate::calc::{mean_float, median_float, max_float, min_float, sum_float};
+
 
 #[pyfunction]
 pub fn r_computematrix(
@@ -143,45 +145,40 @@ pub fn r_computematrix(
             regions.extend(reg);
             regionsizes.insert(regsize.0, regsize.1);
         });
-    
+    // Define slop regions, which contain the actual 'bins' to query the bigwig files.
+    let slopregions = pool.install(|| {
+        regions.par_iter()
+            .map(|region| slop_region(&region, &scale_regions, &chromsizes))
+            .collect::<Vec<_>>()
+    });
+
     // Discriminate between reference-point and scale-regions mode.
-    match mode {
-        "reference-point" => {
-            let slopregions = pool.install(|| {
-                regions.par_iter()
-                    .map(|region| slop_region(&region, &scale_regions, &chromsizes))
-                    .collect::<Vec<_>>()
-            });
-            let mut matrix: Vec<Vec<f32>> = pool.install(|| {
-                bw_files.par_iter()
-                    .map(|i| bwintervals(&i, &regions, &slopregions, &scale_regions))
-                    .reduce(
-                        || vec![vec![]; regions.len()],
-                        |mut acc, vec_of_vecs| {
-                            for (i, inner_vec) in vec_of_vecs.into_iter().enumerate() {
-                                acc[i].extend(inner_vec);
-                            }
-                            acc
-                        },
-                    )
-            });
-            matrix_dump(
-                sortregions,
-                sortusing,
-                sort_using_samples,
-                regions,
-                matrix, 
-                scale_regions,
-                regionsizes,
-                ofile,
-                verbose
-            );
-        },
-        "scale-regions" => {
-            println!("Implementing scale-regions hihi");
-        },
-        _ => panic!("Mode should be either reference-point or scale-regions. {} is not supported.", mode),
-    }
+
+    let mut matrix: Vec<Vec<f32>> = pool.install(|| {
+        bw_files.par_iter()
+            .map(|i| bwintervals(&i, &regions, &slopregions, &scale_regions))
+            .reduce(
+                || vec![vec![]; regions.len()],
+                |mut acc, vec_of_vecs| {
+                    for (i, inner_vec) in vec_of_vecs.into_iter().enumerate() {
+                        acc[i].extend(inner_vec);
+                    }
+                    acc
+                },
+            )
+    });
+    matrix_dump(
+        sortregions,
+        sortusing,
+        sort_using_samples,
+        regions,
+        matrix, 
+        scale_regions,
+        regionsizes,
+        ofile,
+        verbose
+    );
+
     Ok(())
 }
 
@@ -190,23 +187,22 @@ fn slop_region(
     scale_regions: &Scalingregions,
     chromsizes: &HashMap<String, u32>
 ) -> Vec<Bin> {
-    // Idea is to create a vector of tuples with start and end of every bin (binsize passed by computeMatrix).
-    // The number of columns per region needs to be fixed per region.
+    // Idea is to create a vector Bins (Conbin or Catbin) which encodes start and end of every bin (binsize passed by computeMatrix).
+    // Catbin takes care of the situation where one needs metagenes, and thus multiple start/end per bin are possible.
+    // The number of columns is predetermined
     // Note that the before / after could mean that we run out of chromosome. 
     // Invalid regions (later to be encoded as NA or 0), will be pushed as (0,0) tuples.
     // Note that if nan_after_end is set to true, we will push (0,0) tuples after the end of the region.
-
-    // chromosome end
+    
+    // Get the chromosome end for a specific region, and assert that the region stays within the chromosome boundary.
+    // Note that only a right check is needed, as positions are u32.
+    // Note that we know &region.chrom is inside chromsizes already, since this filtering is done at the region reading stage.
     let chromend: u32 = *chromsizes.get(&region.chrom).unwrap();
-
-    // Assert region stays within chromosome boundary.
     region.assert_end(chromend);
-    // Get the anchorpoint per region.
-    let anchorpoint = region.get_anchorpoint(&scale_regions.referencepoint);
-    // Create Vector of bins wrt. the anchorpoint.
-    region.get_anchor_bins(anchorpoint, scale_regions, chromend)
+    region.get_anchor_bins(scale_regions, chromend)
 }
 
+#[derive(Debug)]
 pub struct Scalingregions {
     pub upstream: u32,
     pub downstream: u32,
@@ -276,11 +272,27 @@ impl fmt::Display for Revalue {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Bin {
     Conbin(u32, u32),
     Catbin(Vec<(u32, u32)>),
 }
+
+impl Bin {
+    pub fn get_start(&self) -> u32 {
+        match self {
+            Bin::Conbin(start, _) => *start,
+            Bin::Catbin(starts) => starts.first().unwrap().0,
+        }
+    }
+    pub fn get_end(&self) -> u32 {
+        match self {
+            Bin::Conbin(_, end) => *end,
+            Bin::Catbin(ends) => ends.last().unwrap().1,
+        }
+    }
+}
+
 
 #[derive(Clone, Debug)]
 pub struct Region {
@@ -368,22 +380,65 @@ impl Region {
         }
     }
 
-    pub fn get_anchor_bins(&self, anchorpoint: u32, scale_regions: &Scalingregions, chromend: u32) -> Vec<Bin> {
+    pub fn get_anchor_bins(&self, scale_regions: &Scalingregions, chromend: u32) -> Vec<Bin> {
         // Given an anchorpoint, return a vector, start, end , middle
         // The order of the vector is always 5' -> 3', meaning 'increasing' for +/. regions, and 'decreasing' for - regions.
         // At this stage, two situations are possible:
         // - self.start / self.end are Revalue::U, meaning we are in 'non metagene' mode.
         // - self.start / self.end are Revalue::V, meaning we are in 'metagene' mode, and the bins returned are exon-aware.
         // We need a notion of bins that don't make sense (i.e. beyond chromosome boundaries). These are encoded as (0,0)
-        let mut bins: Vec<Bin> = Vec::new();
 
+        let mut bins: Vec<Bin> = Vec::new();
+        let mut bodybins: Vec<Bin> = Vec::new();
+
+        // Define anchorpoints
+        let anchorstart;
+        let anchorstop;
+        match scale_regions.mode.as_str() {
+            "reference-point" => {
+                anchorstart = self.get_anchorpoint(&scale_regions.referencepoint);
+                anchorstop = anchorstart;
+            },
+            "scale-regions" => {
+                match (&self.start, &self.end) {
+                    (Revalue::U(start), Revalue::U(end)) => {
+                        anchorstart = *start;
+                        anchorstop = *end;
+                    },
+                    (Revalue::V(start), Revalue::V(end)) => {
+                        anchorstart = *start.first().unwrap();
+                        anchorstop = *end.last().unwrap();
+                    },
+                    _ => panic!("Start and End are not either both u32, or Vecs. This means your regions file is ill-defined. Fix {}.",self.name),
+                }
+            },
+            _ => panic!("Mode should either be reference-point or scale-regions. {} is not supported.", scale_regions.mode),
+        }
+        if scale_regions.mode != "reference-point" {
+            // scale-regions mode. Assert
+            assert!(scale_regions.regionbodylength != 0, "scale-regions mode, but regionbodylength is 0.");
+            if self.regionlength < (scale_regions.unscaled5prime + scale_regions.unscaled3prime) ||
+               self.regionlength - (scale_regions.unscaled5prime + scale_regions.unscaled3prime) < scale_regions.binsize {
+                println!("Warning ! Region {} is shorter than the binsize (potentially after unscaled regions taken into account. Whole region encoded as 0 or NA", self.name);
+                let nbin = scale_regions.cols_expected / scale_regions.bwfiles;
+                for _ in 0..nbin {
+                    bins.push(Bin::Conbin(0,0));
+                }
+                return bins;
+            } else {
+                bodybins.extend(self.scale_regionbody(scale_regions, chromend));
+            }
+        }
+        // Get flanking regions.
+        // Note that we still need to deal with exon - non-exon as reference-point mode could require metagene walks.
         match self.strand.as_str() {
             "+" | "." => {
                 match (&self.start, &self.end) {
                     (Revalue::U(start), Revalue::U(end)) => {
                         // simplest scenario,
-                        let mut absstart: i32 = anchorpoint as i32 - scale_regions.upstream as i32;
-                        let absstop: i32 = anchorpoint as i32 + scale_regions.downstream as i32;
+                        let mut bodyjump: bool = false;
+                        let mut absstart: i32 = anchorstart as i32 - scale_regions.upstream as i32;
+                        let absstop: i32 = anchorstop as i32 + scale_regions.downstream as i32;
                         while absstart < absstop {
                             let bin = absstart + scale_regions.binsize as i32;
                             if absstart < 0 || absstart as u32 >= chromend || bin as u32 >= chromend {
@@ -392,11 +447,23 @@ impl Region {
                                 // If we reached end of region, and nan_after_end is true, push (0,0)
                                 if scale_regions.nan_after_end && absstart as u32 >= *end {
                                     bins.push(Bin::Conbin(0,0));
+                                // accomodate zeroasNan too ?
                                 } else {
                                     bins.push(Bin::Conbin(absstart as u32, bin as u32));
                                 }
                             }
-                            absstart = bin;
+                            if !bodyjump && bin >= anchorstop as i32 {
+                                bodyjump = true;
+                                // if we have bodybins, this is the time to include them.
+                                for bin in bodybins.into_iter() {
+                                    bins.push(bin);
+                                }
+                                // Since we consume bodybins here (safe to say we do not needs this anymore as they are other match arms), this needs to be 'reset' as due to scope.
+                                bodybins = Vec::new();
+                                absstart = anchorstop as i32;
+                            } else {
+                                absstart = bin;
+                            }
                         }
                     }
                     (Revalue::V(start), Revalue::V(end)) => {
@@ -405,7 +472,7 @@ impl Region {
                             .collect();
                         // Right side.
                         let mut rightbins: Vec<Bin> = Vec::new();
-                        let mut lastanchor: u32 = anchorpoint;
+                        let mut lastanchor: u32 = anchorstop;
                         let mut walked_bps: u32 = 0;
                         while walked_bps < scale_regions.downstream {
                             if lastanchor >= chromend {
@@ -427,7 +494,7 @@ impl Region {
                         }
                         // Left side.
                         let mut leftbins: Vec<Bin> = Vec::new();
-                        let mut lastanchor: u32 = anchorpoint;
+                        let mut lastanchor: u32 = anchorstart;
                         let mut walked_bps: u32 = 0;
                         while walked_bps < scale_regions.upstream {
                             if lastanchor == 0 {
@@ -439,7 +506,7 @@ impl Region {
                                     lastanchor,
                                     scale_regions.binsize,
                                     chromend,
-                                    false,
+                                    scale_regions.nan_after_end,
                                     false
                                 );
                                 leftbins.push(bin);
@@ -452,6 +519,12 @@ impl Region {
                         for bin in leftbins.into_iter() {
                             bins.push(bin);
                         }
+                        // If we have bodybins, they should be squeezed in here.
+                        for bin in bodybins.into_iter() {
+                            bins.push(bin);
+                        }
+                        // Reset bodybins, as they are consumed.
+                        bodybins = Vec::new();
                         for bin in rightbins.into_iter() {
                             bins.push(bin);
                         }
@@ -464,8 +537,9 @@ impl Region {
                 match (&self.start, &self.end) {
                     (Revalue::U(start), Revalue::U(end)) => {
                         // Still simple scenario, we just gotta walk the other way.
-                        let mut absstart: i32 = anchorpoint as i32 + scale_regions.upstream as i32;
-                        let absstop: i32 = anchorpoint as i32 - scale_regions.downstream as i32;
+                        let mut bodyjump: bool = false;
+                        let mut absstart: i32 = anchorstop as i32 + scale_regions.upstream as i32;
+                        let absstop: i32 = anchorstart as i32 - scale_regions.downstream as i32;
                         while absstart > absstop {
                             let bin = absstart - scale_regions.binsize as i32;
                             if absstart as u32 > chromend || bin < 0 {
@@ -478,7 +552,17 @@ impl Region {
                                     bins.push(Bin::Conbin(bin as u32, absstart as u32));
                                 }
                             }
-                            absstart = bin;
+                            if !bodyjump && bin <= anchorstart as i32 {
+                                bodyjump = true;
+                                bodybins.reverse();
+                                for bin in bodybins.into_iter() {
+                                    bins.push(bin);
+                                }
+                                bodybins = Vec::new();
+                                absstart = anchorstart as i32;
+                            } else {
+                                absstart = bin;
+                            }
                         }
                     }
                     (Revalue::V(start), Revalue::V(end)) => {
@@ -487,7 +571,7 @@ impl Region {
                             .collect();
                         // Right side.
                         let mut rightbins: Vec<Bin> = Vec::new();
-                        let mut lastanchor: u32 = anchorpoint;
+                        let mut lastanchor: u32 = anchorstop;
                         let mut walked_bps: u32 = 0;
                         while walked_bps < scale_regions.upstream {
                             if lastanchor >= chromend {
@@ -499,7 +583,7 @@ impl Region {
                                     lastanchor,
                                     scale_regions.binsize,
                                     chromend,
-                                    false,
+                                    scale_regions.nan_after_end,
                                     true
                                 );
                                 rightbins.push(bin);
@@ -509,7 +593,7 @@ impl Region {
                         }
                         // Left side.
                         let mut leftbins: Vec<Bin> = Vec::new();
-                        let mut lastanchor: u32 = anchorpoint;
+                        let mut lastanchor: u32 = anchorstart;
                         let mut walked_bps: u32 = 0;
                         while walked_bps < scale_regions.downstream {
                             if lastanchor == 0 {
@@ -534,6 +618,11 @@ impl Region {
                         for bin in rightbins.into_iter() {
                             bins.push(bin);
                         }
+                        bodybins.reverse();
+                        for bin in bodybins.into_iter() {
+                            bins.push(bin);
+                        }
+                        bodybins = Vec::new();
                         for bin in leftbins.into_iter() {
                             bins.push(bin);
                         }
@@ -552,6 +641,367 @@ impl Region {
             scale_regions.cols_expected / scale_regions.bwfiles
         );
         bins
+    }
+
+    pub fn scale_regionbody(&self, scale_regions: &Scalingregions, chromend: u32) -> Vec<Bin> {
+        // A vector of bins needs to be constructed for regionbody.
+        // Since this is scaling mode, 'linspace' functionality is reproduced.
+        match self.strand.as_str() {
+            "+" | "." => {
+                match (&self.start, &self.end) {
+                    (Revalue::U(start), Revalue::U(end)) => {
+                        // No exons, forward strand. divide start  - end as such:
+                        // |---un5prime---|---bodylength---|---un3prime---|
+                        let mut un5bins: Vec<Bin> = Vec::new();
+                        let mut un3bins: Vec<Bin> = Vec::new();
+                        let mut innerbins: Vec<Bin> = Vec::new();
+                        if scale_regions.unscaled5prime > 0 {
+                            un5bins.extend((0..scale_regions.unscaled5prime)
+                                .step_by(scale_regions.binsize as usize)
+                                .map(|i| Bin::Conbin(*start + i, *start + i + scale_regions.binsize))
+                                .collect::<Vec<Bin>>());
+                        }
+                        
+                        if scale_regions.unscaled3prime > 0 {
+                            un3bins.extend( (0..scale_regions.unscaled3prime)
+                                .step_by(scale_regions.binsize as usize)
+                                .rev()
+                                .map(|i| Bin::Conbin(*end - i - scale_regions.binsize, *end - i))
+                                .collect::<Vec<Bin>>() );
+                        }
+                        let bodystart = *start + scale_regions.unscaled5prime;
+                        let bodyend = *end - scale_regions.unscaled3prime;
+                        
+                        // Get the bins over the body length. These need to be scaled, so similar to deeptools < 4, linspace is used.
+                        let neededbins = (scale_regions.regionbodylength / scale_regions.binsize) as usize;
+                        // There's multiple options here:
+                        // transcriptlength >= regionbodylength -> linspace
+                        // regionbodylength / binsize > transcriptlength <= regionbodylength -> 1 >= binsize > binsize.
+                        // transcriptlength <= regionbodylength / binsize -> index repetitions with binsize of one.
+                        let scaledbinsize = std::cmp::min(std::cmp::max((bodyend - bodystart) / neededbins as u32, 1), scale_regions.binsize);
+
+                        innerbins.extend( Array1::linspace(bodystart as f32, (bodyend - scaledbinsize) as f32, neededbins)
+                            .mapv(|x| x as u32)
+                            .map(|x| Bin::Conbin(*x, *x + scaledbinsize))
+                            .into_iter()
+                            .collect::<Vec<_>>() );
+
+                        // Combine the vectors and return
+                        let mut combined_bins = Vec::new();
+                        if scale_regions.unscaled5prime > 0 {
+                            combined_bins.extend(un5bins.into_iter());
+                        }
+                        combined_bins.extend(innerbins.into_iter());
+                        if scale_regions.unscaled3prime > 0 {
+                            combined_bins.extend(un3bins.into_iter());
+                        }
+                        return combined_bins;
+                    },
+                    (Revalue::V(start), Revalue::V(end)) => {
+                        let exons: Vec<(u32, u32)> = start.iter().zip(end.iter())
+                            .map(|(&s, &e)| (s, e)) 
+                            .collect();
+                        let mut un5bins: Vec<Bin> = Vec::new();
+                        let mut un3bins: Vec<Bin> = Vec::new();
+                        if scale_regions.unscaled5prime > 0 {
+                            let mut walked_bps: u32 = 0;
+                            let mut lastanchor: u32 = start[0];
+
+                            while walked_bps < scale_regions.unscaled5prime {
+                                let (bin, retanch) = refpoint_exonwalker(
+                                    &exons,
+                                    lastanchor,
+                                    scale_regions.binsize,
+                                    chromend,
+                                    scale_regions.nan_after_end,
+                                    true
+                                );
+                                un5bins.push(bin);
+                                walked_bps += scale_regions.binsize;
+                                lastanchor = retanch;
+                            }
+                        }
+                        if scale_regions.unscaled3prime > 0 {
+                            let mut walked_bps: u32 = 0;
+                            let mut lastanchor: u32 = *end.last().unwrap();
+
+                            while walked_bps < scale_regions.unscaled3prime {
+                                let (bin, retanch) = refpoint_exonwalker(
+                                    &exons,
+                                    lastanchor,
+                                    scale_regions.binsize,
+                                    chromend,
+                                    scale_regions.nan_after_end,
+                                    false
+                                );
+                                un3bins.push(bin);
+                                walked_bps += scale_regions.binsize;
+                                lastanchor = retanch;
+                            }
+                        }
+                        un3bins.reverse();
+                        
+                        let bodystart: u32;
+                        let bodyend: u32;
+                        if scale_regions.unscaled5prime > 0 {
+                            bodystart = un5bins.last().unwrap().get_end();
+                        } else {
+                            bodystart = *start.first().unwrap();
+                        }
+                        if scale_regions.unscaled3prime > 0 {
+                            bodyend = un3bins.first().unwrap().get_start();
+                        } else {
+                            bodyend = *end.last().unwrap();
+                        }
+                        let truebodylength = self.regionlength - scale_regions.unscaled5prime - scale_regions.unscaled3prime;
+                        let neededbins = (scale_regions.regionbodylength / scale_regions.binsize) as usize;
+                        let scaledbinsize = std::cmp::min(std::cmp::max(truebodylength / neededbins as u32, 1), scale_regions.binsize);
+                        // Things are a bit tricky now, as we can do a linspace over the region, but we don't have a notion of the exons.
+                        // I think easiest is to just pull a hashmap over the entire region, get linspace from hashmap to vec, and be done with it.
+                        // technically we fetch a bunch of regions we don't need, but this operation is not too expensive.
+
+                        let mut binmap: HashMap<u32, Bin> = HashMap::new();
+                        let mut lastanchor: u32 = bodystart;
+
+                        for ix in 0..((truebodylength/scaledbinsize)+1) {
+                            let (bin, anchor) = refpoint_exonwalker(
+                                &exons,
+                                lastanchor,
+                                scaledbinsize,
+                                chromend,
+                                scale_regions.nan_after_end,
+                                true
+                            );
+                            lastanchor = anchor;
+                            match bin {
+                                Bin::Conbin(start, end) => {
+                                    if end > bodyend {
+                                        binmap.insert(ix, Bin::Conbin(start, bodyend));
+                                    } else {
+                                        binmap.insert(ix, Bin::Conbin(start, end));
+                                    }
+                                },
+                                Bin::Catbin(bins) => {
+                                    if bins.last().unwrap().1 > bodyend {
+                                        let mut newbins: Vec<(u32, u32)> = Vec::new();
+                                        for (s, e) in bins.iter() {
+                                            if *e > bodyend {
+                                                newbins.push((*s, bodyend));
+                                            } else {
+                                                newbins.push((*s, *e));
+                                            }
+                                        }
+                                        binmap.insert(ix, Bin::Catbin(newbins));
+                                    } else {
+                                        binmap.insert(ix, Bin::Catbin(bins));
+                                    }
+                                },
+                            }
+                        }
+
+                        let innerbins = Array1::linspace(0 as f32, ((truebodylength)/scaledbinsize) as f32, neededbins)
+                            .mapv(|x| x as u32)
+                            .map(|x| binmap.get(&x).unwrap().clone())
+                            .into_iter()
+                            .collect::<Vec<Bin>>();
+                        // Combine the vectors and return
+                        let mut combined_bins = Vec::new();
+                        if scale_regions.unscaled5prime > 0 {
+                            combined_bins.extend(un5bins.into_iter());
+                        }
+                        combined_bins.extend(innerbins.into_iter());
+                        if scale_regions.unscaled3prime > 0 {
+                            combined_bins.extend(un3bins.into_iter());
+                        }
+                        return combined_bins;
+                    },
+                    _ => panic!("Start and End are not either both u32, or Vecs. This means your regions file is ill-defined."),
+                }
+            },
+            "-" => {
+                match (&self.start, &self.end) {
+                    (Revalue::U(start), Revalue::U(end)) => {
+                        // No exons, negative strand. divide start  - end as such:
+                        // |---un3prime---|---bodylength---|---un5prime---|
+                        println!("NEGATIVE MODE");
+                        let mut un5bins: Vec<Bin> = Vec::new();
+                        let mut un3bins: Vec<Bin> = Vec::new();
+                        let mut innerbins: Vec<Bin> = Vec::new();
+                        if scale_regions.unscaled5prime > 0 {
+                            un5bins.extend((0..scale_regions.unscaled5prime)
+                                .step_by(scale_regions.binsize as usize)
+                                .map(|i| Bin::Conbin(*end - i - scale_regions.binsize, *end - i))
+                                .collect::<Vec<Bin>>());
+                        }
+                        
+                        if scale_regions.unscaled3prime > 0 {
+                            un3bins.extend( (0..scale_regions.unscaled3prime)
+                                .step_by(scale_regions.binsize as usize)
+                                .rev()
+                                .map(|i| Bin::Conbin(*start + scale_regions.unscaled3prime - i - scale_regions.binsize, *start + scale_regions.unscaled3prime - i))
+                                .collect::<Vec<Bin>>() );
+                        }
+                        let bodystart = *start + scale_regions.unscaled3prime;
+                        let bodyend = *end - scale_regions.unscaled5prime;
+
+                        // Get the bins over the body length. These need to be scaled, so similar to deeptools < 4, linspace is used.
+                        let neededbins = (scale_regions.regionbodylength / scale_regions.binsize) as usize;
+                        // There's multiple options here:
+                        // transcriptlength >= regionbodylength -> linspace
+                        // regionbodylength / binsize > transcriptlength <= regionbodylength -> 1 >= binsize > binsize.
+                        // transcriptlength <= regionbodylength / binsize -> index repetitions with binsize of one.
+                        let mut scaledbinsize = (bodyend - bodystart)/neededbins as u32;
+                        if scaledbinsize == 0 {
+                            scaledbinsize = 1;
+                        }
+                        if scaledbinsize > scale_regions.binsize {
+                            scaledbinsize = scale_regions.binsize;
+                        }
+
+                        innerbins.extend( Array1::linspace(bodystart as f32, (bodyend - scaledbinsize) as f32, neededbins)
+                            .mapv(|x| x as u32)
+                            .map(|x| Bin::Conbin(*x, *x + scaledbinsize))
+                            .into_iter()
+                            .collect::<Vec<_>>() );
+                        
+                        // Reverse innerbins to go from 3' -> 5'
+                        innerbins.reverse();
+                        // Combine the vectors and return
+                        let mut combined_bins = Vec::new();
+                        if scale_regions.unscaled3prime > 0 {
+                            combined_bins.extend(un3bins.into_iter());
+                        }
+                        combined_bins.extend(innerbins.into_iter());
+                        if scale_regions.unscaled5prime > 0 {
+                            combined_bins.extend(un5bins.into_iter());
+                        }
+                        return combined_bins;
+                    },
+                    (Revalue::V(start), Revalue::V(end)) => {
+                        let exons: Vec<(u32, u32)> = start.iter().zip(end.iter())
+                            .map(|(&s, &e)| (s, e)) 
+                            .collect();
+                        let mut un5bins: Vec<Bin> = Vec::new();
+                        let mut un3bins: Vec<Bin> = Vec::new();
+                        if scale_regions.unscaled5prime > 0 {
+                            let mut walked_bps: u32 = 0;
+                            let mut lastanchor: u32 = *end.last().unwrap();
+
+                            while walked_bps < scale_regions.unscaled5prime {
+                                let (bin, retanch) = refpoint_exonwalker(
+                                    &exons,
+                                    lastanchor,
+                                    scale_regions.binsize,
+                                    chromend,
+                                    scale_regions.nan_after_end,
+                                    false
+                                );
+                                un5bins.push(bin);
+                                walked_bps += scale_regions.binsize;
+                                lastanchor = retanch;
+                            }
+                        }
+                        un5bins.reverse();
+
+                        if scale_regions.unscaled3prime > 0 {
+                            let mut walked_bps: u32 = 0;
+                            let mut lastanchor: u32 = start[0];
+
+                            while walked_bps < scale_regions.unscaled3prime {
+                                let (bin, retanch) = refpoint_exonwalker(
+                                    &exons,
+                                    lastanchor,
+                                    scale_regions.binsize,
+                                    chromend,
+                                    scale_regions.nan_after_end,
+                                    true
+                                );
+                                un3bins.push(bin);
+                                walked_bps += scale_regions.binsize;
+                                lastanchor = retanch;
+                            }
+                        }
+                        
+                        let bodystart: u32;
+                        let bodyend: u32;
+                        if scale_regions.unscaled3prime > 0 {
+                            bodystart = un3bins.last().unwrap().get_end();
+                        } else {
+                            bodystart = *start.first().unwrap();
+                        }
+                        if scale_regions.unscaled5prime > 0 {
+                            bodyend = un5bins.first().unwrap().get_start();
+                        } else {
+                            bodyend = *end.last().unwrap();
+                        }
+                        let truebodylength = self.regionlength - scale_regions.unscaled5prime - scale_regions.unscaled3prime;
+                        let neededbins = (scale_regions.regionbodylength / scale_regions.binsize) as usize;
+                        let scaledbinsize = std::cmp::min(std::cmp::max(truebodylength / neededbins as u32, 1), scale_regions.binsize);
+                        // Things are a bit tricky now, as we can do a linspace over the region, but we don't have a notion of the exons.
+                        // I think easiest is to just pull a hashmap over the entire region, get linspace from hashmap to vec, and be done with it.
+                        // technically we fetch a bunch of regions we don't need, but this operation is not too expensive.
+
+                        let mut binmap: HashMap<u32, Bin> = HashMap::new();
+                        let mut lastanchor: u32 = bodystart;
+
+                        for ix in 0..((truebodylength/scaledbinsize)+1) {
+                            let (bin, anchor) = refpoint_exonwalker(
+                                &exons,
+                                lastanchor,
+                                scaledbinsize,
+                                chromend,
+                                scale_regions.nan_after_end,
+                                true
+                            );
+                            lastanchor = anchor;
+                            match bin {
+                                Bin::Conbin(start, end) => {
+                                    if end > bodyend {
+                                        binmap.insert(ix, Bin::Conbin(start, bodyend));
+                                    } else {
+                                        binmap.insert(ix, Bin::Conbin(start, end));
+                                    }
+                                },
+                                Bin::Catbin(bins) => {
+                                    if bins.last().unwrap().1 > bodyend {
+                                        let mut newbins: Vec<(u32, u32)> = Vec::new();
+                                        for (s, e) in bins.iter() {
+                                            if *e > bodyend {
+                                                newbins.push((*s, bodyend));
+                                            } else {
+                                                newbins.push((*s, *e));
+                                            }
+                                        }
+                                        binmap.insert(ix, Bin::Catbin(newbins));
+                                    } else {
+                                        binmap.insert(ix, Bin::Catbin(bins));
+                                    }
+                                },
+                            }
+                        }
+
+                        let innerbins = Array1::linspace(0 as f32, ((truebodylength)/scaledbinsize) as f32, neededbins)
+                            .mapv(|x| x as u32)
+                            .map(|x| binmap.get(&x).unwrap().clone())
+                            .into_iter()
+                            .collect::<Vec<Bin>>();
+                        // Combine the vectors and return
+                        let mut combined_bins = Vec::new();
+                        if scale_regions.unscaled5prime > 0 {
+                            combined_bins.extend(un5bins.into_iter());
+                        }
+                        combined_bins.extend(innerbins.into_iter());
+                        if scale_regions.unscaled3prime > 0 {
+                            combined_bins.extend(un3bins.into_iter());
+                        }
+                        return combined_bins;
+                    },
+                    _ => panic!("Start and End are not either both u32, or Vecs. This means your regions file is ill-defined."),
+                }
+            },
+            _ => panic!("Strand should either be + or - or . {:?} is not supported.", self.strand),
+        }
+        Vec::new()
     }
 }
 
@@ -723,7 +1173,6 @@ fn refpoint_exonwalker(exons: &Vec<(u32, u32)>, anchor: u32, binsize: u32, chrom
         }
     }
 }
-
 
 fn matrix_dump(
     sortregions: &str,
