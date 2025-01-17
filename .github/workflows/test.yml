@@ -54,6 +54,9 @@ jobs:
       - name: Test deepTools
         run: |
           pytest -v
+      - name: Build wheel
+        run: |
+          python -m build
       - name: Test wheel
         run: |
           pip install dist/*whl
