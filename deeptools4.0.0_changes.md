@@ -1,4 +1,6 @@
-# computeMatrix
+# Changes
+
+## computeMatrix
 
  - --sortRegions 'no' option no longer exists
  - Sorting ascend / descend no longer has subsorting by position.
@@ -6,17 +8,14 @@
  - bed files in computeMatrix no longer support '#' to define groups.
  - 'chromosome matching' i.e. chr1 <-> 1, chrMT <-> MT is no longer performed.
 
-# normalization
+## normalization
 
-Exactscaling is no longer an option, it's always performed.
+ - Exactscaling is no longer an option, it's always performed.
 
-# Todo
+## alignmentSieve
 
- - allow multithreaded bw writing
- - properly divide region work over threads -> region sorting & taking size into account
- - calc for computeMatrix functions -> Struct / Enum
- - filehanlder bed file could all be &str, not clones
-
+- options label, smartLabels, genomeChunkLength are removed.
+- ignoreDuplicates is removed, and (if wanted) should be set by the SamFlagExclude setting.
 
 # Testing
  
@@ -29,3 +28,12 @@ Exactscaling is no longer an option, it's always performed.
  - duplicate renaming _r1, _r2, ...
  - GTF, BED3, BED6, BED12, mixedBED (?)
  - scaleRegions, un5, un3, regionbodylength, metagene
+
+ ## alignmentSieve
+
+ - unmapped reads to unfiltered_out
+
+# Todo
+
+- AlignmentSieve: Shift, Bed, Optimization.
+- bamCoverage / bamCompare: filtering, extend.
