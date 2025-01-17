@@ -1027,7 +1027,6 @@ impl Region {
             },
             _ => panic!("Strand should either be + or - or . {:?} is not supported.", self.strand),
         }
-        Vec::new()
     }
 }
 
@@ -1319,14 +1318,13 @@ fn matrix_dump(
             regions.len(),
             "Length of sorted indices does not match regions length: {} ! = {}", sortedix.len(), regions.len()
         );
-        let mut sortedmatrix: Vec<Vec<f32>> = Vec::new();
-        let mut sortedregions: Vec<Region> = Vec::new();
+
         // Reorder matrix & regions
-        sortedmatrix = sortedix
+        let sortedmatrix = sortedix
             .iter()
             .map(|ix| matrix[*ix].clone())
             .collect();
-        sortedregions = sortedix
+        let sortedregions = sortedix
             .into_iter()
             .map(|ix| regions[ix].clone())
             .collect();

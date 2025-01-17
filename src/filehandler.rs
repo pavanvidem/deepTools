@@ -344,7 +344,7 @@ pub fn chrombounds_from_bw(bwfile: &str) -> HashMap<String, u32> {
     // define chromsizes hashmap
     let mut chromsizes: HashMap<String, u32> = HashMap::new();
     let bwf = File::open(bwfile).expect("Failed to open bw file.");
-    let mut reader = BigWigRead::open(bwf).unwrap();
+    let reader = BigWigRead::open(bwf).unwrap();
     for chrom in reader.chroms() {
         chromsizes.insert(chrom.name.clone(), chrom.length);
     }
@@ -531,7 +531,7 @@ pub fn header_matrix(scale_regions: &Scalingregions, regionsizes: HashMap<String
     let mut samplebounds: Vec<u64> = Vec::new();
     samplebounds.push(0);
     let mut cumsum: u64 = 0;
-    for i in 0..scale_regions.bwfiles {
+    for _ in 0..scale_regions.bwfiles {
         cumsum += colsize_per_sample as u64;
         samplebounds.push(cumsum);
     }

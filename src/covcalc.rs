@@ -60,7 +60,7 @@ pub fn bam_pileup<'a>(
     binsize: &u32,
     ispe: &bool,
     ignorechr: &Vec<String>,
-    filters: &Alignmentfilters,
+    _filters: &Alignmentfilters,
     collapse: bool,
 ) -> (
     Vec<TempPath>, // temp bedgraph file.
@@ -98,7 +98,7 @@ pub fn bam_pileup<'a>(
     if binsize > &1 {
         // populate the bg vector with 0 counts over all bins
         let mut counts: Vec<f32> = vec![0.0; (region.2 - region.1).div_ceil(*binsize) as usize];
-        let mut binstart = region.1;
+        // let mut binstart = region.1;
         let mut binix: u32 = 0;
         
         for record in bam.records() {
