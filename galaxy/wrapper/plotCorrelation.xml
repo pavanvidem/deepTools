@@ -109,7 +109,7 @@
         </data>
     </outputs>
     <tests>
-        <test expect_num_outputs="1">
+        <test expect_num_outputs="2">
             <param name="corData" value="multiBamSummary_result1.npz" ftype="deeptools_coverage_matrix" />
             <param name="outFileFormat" value="png" />
             <param name="outFileCorMatrix" value="True" />
