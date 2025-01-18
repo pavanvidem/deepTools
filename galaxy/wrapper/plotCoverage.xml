@@ -114,7 +114,7 @@
         </data>
     </outputs>
     <tests>
-        <test expect_num_outputs="1">
+        <test expect_num_outputs="3">
             <param name="bamfiles" value="bowtie2 test1.bam,bowtie2 test1.bam" ftype="bam" />
             <!--param name="outFileFormat" value="png" /-->
             <param name="showAdvancedOpt" value="yes" />
