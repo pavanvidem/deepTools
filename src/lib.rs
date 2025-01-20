@@ -7,6 +7,7 @@ mod alignmentsieve;
 mod filehandler;
 mod normalization;
 mod calc;
+mod test;
 
 #[pymodule]
 fn hp(m: &Bound<'_, PyModule>) -> PyResult<()> {
