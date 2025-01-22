@@ -6,6 +6,7 @@ build-backend = "maturin"
 
 [tool.maturin]
 python-source = "pydeeptools"
+exclude = ["pydeeptools/deeptools/test/**/*"]
 module-name = "deeptools.hp"
 bindings = "pyo3"
 
