@@ -36,7 +36,7 @@ def test_bam_coverage_arguments():
     """
     Test minimal command line args for bamCoverage
     """
-    outfile = '/tmp/test_file2.bg'
+    outfile = '/tmp/test_file.bg'
     for fname in [BAMFILE_B, CRAMFILE_B]:
         args = "--bam {} -o {} --outFileFormat bedgraph".format(fname, outfile).split()
         bam_cov.main(args)
@@ -44,9 +44,9 @@ def test_bam_coverage_arguments():
         _foo = open(outfile, 'r')
         resp = _foo.readlines()
         _foo.close()
-        expected = ['3R\t0\t50\t0\n', '3R\t150\t200\t2\n']
+        expected = ['3R\t0\t50\t0\n', '3R\t50\t150\t1\n', '3R\t150\t200\t2\n']
         assert f"{resp}" == f"{expected}", f"{resp} != {expected}"
-        #unlink(outfile)
+        unlink(outfile)
 
 
 def test_bam_coverage_extend():
