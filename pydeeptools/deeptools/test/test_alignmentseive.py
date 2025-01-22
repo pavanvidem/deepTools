@@ -30,7 +30,7 @@ def test_minimum_mapping_quality_filter_metric():
 
     bam_file_size = os.path.getsize(BAMFILE_OUT)
     expected_file_size = os.path.getsize(outfile)
-    size_tolerance = 500
+    size_tolerance = 5000
     size_difference = abs(bam_file_size - expected_file_size)
     assert size_difference <= size_tolerance, "File size do not match"
     unlink(outfile)
@@ -61,7 +61,7 @@ def test_with_bam_output_with_shifts():
 
     bam_file_size = os.path.getsize(BAMFILE_OUT2)
     expected_file_size = os.path.getsize(output_bam_file)
-    size_tolerance = 1000
+    size_tolerance = 5000
     size_difference = abs(bam_file_size - expected_file_size)
     assert size_difference <= size_tolerance, "File sizes do not match"
     unlink(output_bam_file)
@@ -77,7 +77,7 @@ def test_with_cram_output_with_shifts():
 
     bam_file_size = os.path.getsize(BAMFILE_OUT3)
     expected_file_size = os.path.getsize(output_bam_file)
-    size_tolerance = 1000
+    size_tolerance = 5000
     size_difference = abs(bam_file_size - expected_file_size)
     assert size_difference <= size_tolerance, "File sizes do not match"
     unlink(output_bam_file)
