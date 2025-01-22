@@ -27,6 +27,9 @@ pub fn r_alignmentsieve(
     _blacklist: &str, // blacklist file name.
     min_fragment_length: u32, // minimum fragment length.
     max_fragment_length: u32, // maximum fragment length.
+    extend_reads: u32,
+    center_reads: bool,
+    
 ) -> PyResult<()> {
     // Input bam file
     let mut bam = Reader::from_path(bamifile).unwrap();

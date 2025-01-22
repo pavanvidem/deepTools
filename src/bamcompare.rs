@@ -143,12 +143,12 @@ pub fn r_bamcompare(
     Ok(())
 }
 
-struct ParsedBamFile<'a> {
-    bamfile: &'a str,
-    ispe: bool,
-    bg: Vec<TempPath>,
-    mapped: u32,
-    unmapped: u32,
-    readlen: f32,
-    fraglen: f32
+pub struct ParsedBamFile<'a> {
+    pub bamfile: &'a str,
+    pub ispe: bool,
+    pub bg: Vec<TempPath>,
+    pub mapped: u32,
+    pub unmapped: u32,
+    pub readlen: f32,
+    pub fraglen: f32
 }
