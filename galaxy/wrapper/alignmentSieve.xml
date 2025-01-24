@@ -7,8 +7,6 @@
     <expand macro="requirements"/>
     <command>
 <![CDATA[
-        #import re
-        #set label = re.sub('[^\.\s\w\-]', '_', str($bamfile.element_identifier))
         ln -s '$bamfile' one.bam &&
         #if $bamfile.ext == 'bam':
             ln -s '${bamfile.metadata.bam_index}' one.bam.bai &&
@@ -18,12 +16,9 @@
         @BINARY@
         @THREADS@
         -b one.bam
-        --label '$label'
         #if $filterRNAstrand:
             --filterRNAstrand '$filterRNAstrand'
         #end if
-
-        $ignoreDuplicates
 
         #if $minMappingQuality:
             --minMappingQuality $minMappingQuality
@@ -104,8 +99,6 @@
             <option value="forward">forward</option>
             <option value="reverse">reverse</option>
         </param>
-
-        <expand macro="ignoreDuplicates"/>
         <expand macro="minMappingQuality"/>
         <expand macro="samFlags"/>
         <expand macro="fragLength"/>

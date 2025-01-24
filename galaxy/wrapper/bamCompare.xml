@@ -45,7 +45,7 @@
                 #end if
             #end if
 
-            --operation $comparison.type
+            --operation '$comparison.type'
             $exactScaling
 
             #if $comparison.type in ['ratio','log2']:
@@ -187,25 +187,30 @@
             <param name="outFileFormat" value="bedgraph"/>
             <param name="binSize" value="5"/>
             <param name="type" value="ratio"/>
-            <output name="outFileName" file="bamCompare_result1.bg" ftype="bedgraph"/>
+            <output name="outFileName" ftype="bedgraph">
+                <assert_contents>
+                    <has_text_matching expression="chrM\t0\t16569\t1"/>
+                </assert_contents>
+            </output>
         </test>
         <test expect_num_outputs="1">
             <param name="bamFile1" value="bowtie2 test1.bam" ftype="bam"/>
             <param name="bamFile2" value="bowtie2 test1.bam" ftype="bam"/>
-            <param name="showAdvancedOpt" value="yes"/>
             <param name="outFileFormat" value="bigwig"/>
             <param name="binSize" value="10"/>
-            <param name="type" value="ratio"/>
+            <conditional name="comparison">
+                <param name="type" value="ratio"/>
+            </conditional>
             <output name="outFileName" file="bamCompare_result2.bw" ftype="bigwig"/>
         </test>
         <!-- Test with BAM and CRAM file as input-->
         <test expect_num_outputs="1">
             <param name="bamFile1" value="testA.bam" ftype="bam"/>
             <param name="bamFile2" value="testA.cram" ftype="cram"/>
-            <param name="showAdvancedOpt" value="yes"/>
             <param name="outFileFormat" value="bedgraph"/>
-            <param name="binSize" value="10"/>
-            <param name="type" value="ratio"/>
+            <conditional name="comparison">
+                <param name="type" value="ratio"/>
+            </conditional>
             <output name="outFileName" ftype="bedgraph">
                 <assert_contents>
                     <has_text_matching expression="3R\t0\t200\t1"/>
@@ -217,10 +222,15 @@
         <test expect_num_outputs="1">
             <param name="bamFile1" value="testA.bam" ftype="bam"/>
             <param name="bamFile2" value="testA.cram" ftype="cram"/>
-            <param name="showAdvancedOpt" value="yes"/>
             <param name="outFileFormat" value="bedgraph"/>
-            <param name="binSize" value="10"/>
-            <param name="type" value="substract"/>
+            <conditional name="scaling">
+                <param name="method" value="own"/>
+                <param name="scaleFactor1" value="1"/>
+                <param name="scaleFactor2" value="1"/>
+            </conditional>
+            <conditional name="comparison">
+                <param name="type" value="subtract"/>
+            </conditional>
             <output name="outFileName" ftype="bedgraph">
                 <assert_contents>
                     <has_text_matching expression="3R\t0\t200\t0"/>
@@ -232,10 +242,11 @@
         <test expect_num_outputs="1">
             <param name="bamFile1" value="testA.bam" ftype="bam"/>
             <param name="bamFile2" value="testB.bam" ftype="bam"/>
-            <param name="showAdvancedOpt" value="yes"/>
             <param name="outFileFormat" value="bedgraph"/>
             <param name="binSize" value="10"/>
-            <param name="type" value="ratio"/>
+            <conditional name="comparison">
+                <param name="type" value="subtract"/>
+            </conditional>
             <param name="pseudocount" value="1 1"/>
             <output name="outFileName" ftype="bedgraph">
                 <assert_contents>
@@ -250,10 +261,13 @@
         <test expect_num_outputs="1">
             <param name="bamFile1" value="testA.bam" ftype="bam"/>
             <param name="bamFile2" value="testB.bam" ftype="bam"/>
-            <param name="showAdvancedOpt" value="yes"/>
+            <conditional name="scaling">
+                <param name="method" value="own"/>
+                <param name="scaleFactor1" value="1"/>
+                <param name="scaleFactor2" value="1"/>
+            </conditional>
             <param name="outFileFormat" value="bedgraph"/>
-            <param name="binSize" value="10"/>
-            <param name="type" value="ratio"/>
+            <param name="showAdvancedOpt" value="yes"/>
             <param name="skipZeroOverZero" value="--skipZeroOverZero"/>
             <output name="outFileName" ftype="bedgraph">
                 <assert_contents>
@@ -267,10 +281,12 @@
         <test expect_num_outputs="1">
             <param name="bamFile1" value="testA.bam" ftype="bam"/>
             <param name="bamFile2" value="testB.bam" ftype="bam"/>
-            <param name="showAdvancedOpt" value="yes"/>
+            <param name="method" value="own"/>
+            <param name="scaleFactor1" value="1"/>
+            <param name="scaleFactor2" value="1"/>
+            <param name="type" value="subtract"/>
             <param name="outFileFormat" value="bedgraph"/>
-            <param name="binSize" value="10"/>
-            <param name="type" value="ratio"/>
+            <param name="showAdvancedOpt" value="yes"/>
             <param name="skipNAs" value="true"/>
             <output name="outFileName" ftype="bedgraph">
                 <assert_contents>

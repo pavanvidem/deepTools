@@ -5,8 +5,9 @@
     <token name="@GALAXY_VERSION@">23.2</token>
     <xml name="requirements">
         <requirements>
-            <!-- <requirement type="package" version="@TOOL_VERSION@">deeptools</requirement> -->
-            <requirement type="package" version="1.21">samtools</requirement>
+            <container type="docker">quay.io/biocontainers/deeptools:4.0.0--h004ce86_0</container>
+            <!--requirement type="package" version="@TOOL_VERSION@">deeptools</requirement>
+            <requirement type="package" version="1.21">samtools</requirement-->
         </requirements>
         <expand macro="stdio"/>
         <version_command>@BINARY@ --version</version_command>
@@ -552,21 +553,15 @@ is vital to you, select Yes below.">
     </token>
 
     <xml name="blacklist">
-        <param argument="--blackListFileName" type="data" format="bed,gtf" multiple="true" optional="true" min="0"
+        <param argument="--blackListFileName" type="data" format="bed,gtf" optional="true" min="0"
             label="Blacklisted regions in BED/GTF format"
             help="One or more files containing regions to exclude from the analysis"/>
     </xml>
 
     <token name="@blacklist@">
 <![CDATA[
-        #if ' '.join( map(str, $advancedOpt.blackListFileName) ) != 'None':
-            #set blfiles=[]
-            #for $f in $advancedOpt.blackListFileName:
-                #silent $blfiles.append("'%s'" % $f)
-            #end for
-            #if $blfiles != ["'None'"]:
-                --blackListFileName #echo ' '.join($blfiles)#
-            #end if
+        #if $advancedOpt.blackListFileName:
+            --blackListFileName '$advancedOpt.blackListFileName'
         #end if
 ]]>
     </token>
