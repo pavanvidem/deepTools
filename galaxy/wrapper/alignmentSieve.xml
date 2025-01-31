@@ -40,14 +40,8 @@
             --maxFragmentLength $maxFragmentLength
         #end if
 
-        #if ' '.join( map(str, $blackListFileName) ) != 'None':
-            #set blfiles=[]
-            #for $f in $blackListFileName:
-                #silent $blfiles.append("'%s'" % $f)
-            #end for
-            #if $blfiles != ["'None'"]:
-                --blackListFileName #echo ' '.join($blfiles)#
-            #end if
+        #if $blackListFileName:
+            --blackListFileName '$blackListFileName'
         #end if
 
         #if $filterMetrics:

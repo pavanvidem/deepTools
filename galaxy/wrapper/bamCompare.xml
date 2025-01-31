@@ -157,10 +157,8 @@
             <when value="yes">
                 <expand macro="smoothLength"/>
                 <expand macro="read_processing_options"/>
-
                 <expand macro="skipNAs"/>
                 <expand macro="skipZeroOverZero"/>
-
                 <param argument="--ignoreForNormalization" type="text" value="" size="50"
                     label="regions that should be excluded for calculating the scaling factor"
                     help="Sometimes it makes sense to exclude certain regions when calculating the scaling factor.
@@ -186,11 +184,15 @@
             <param name="showAdvancedOpt" value="no"/>
             <param name="outFileFormat" value="bedgraph"/>
             <param name="binSize" value="5"/>
-            <param name="type" value="ratio"/>
+            <conditional name="comparison">
+                <param name="type" value="ratio"/>
+            </conditional>
             <output name="outFileName" ftype="bedgraph">
                 <assert_contents>
                     <has_text_matching expression="chrM\t0\t16569\t1"/>
+                    <has_n_lines n="1"/>
                 </assert_contents>
+                has_n_lines
             </output>
         </test>
         <test expect_num_outputs="1">
@@ -268,7 +270,7 @@
             </conditional>
             <param name="outFileFormat" value="bedgraph"/>
             <param name="showAdvancedOpt" value="yes"/>
-            <param name="skipZeroOverZero" value="--skipZeroOverZero"/>
+            <param name="skipZeroOverZero" value="true"/>
             <output name="outFileName" ftype="bedgraph">
                 <assert_contents>
                     <has_text_matching expression="3R\t50\t100\t0.571429"/>
@@ -281,10 +283,14 @@
         <test expect_num_outputs="1">
             <param name="bamFile1" value="testA.bam" ftype="bam"/>
             <param name="bamFile2" value="testB.bam" ftype="bam"/>
-            <param name="method" value="own"/>
-            <param name="scaleFactor1" value="1"/>
-            <param name="scaleFactor2" value="1"/>
-            <param name="type" value="subtract"/>
+            <conditional name="scaling">
+                <param name="method" value="own"/>
+                <param name="scaleFactor1" value="1"/>
+                <param name="scaleFactor2" value="1"/>
+            </conditional>
+            <conditional name="comparison">
+                <param name="type" value="subtract"/>
+            </conditional>
             <param name="outFileFormat" value="bedgraph"/>
             <param name="showAdvancedOpt" value="yes"/>
             <param name="skipNAs" value="true"/>

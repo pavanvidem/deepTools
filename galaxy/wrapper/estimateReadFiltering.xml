@@ -32,15 +32,8 @@
         #if $samFlagExclude:
             --samFlagExclude $samFlagExclude
         #end if
-
-        #if ' '.join( map(str, $blackListFileName) ) != 'None':
-            #set blfiles=[]
-            #for $f in $blackListFileName:
-                #silent $blfiles.append("'%s'" % $f)
-            #end for
-            #if $blfiles != ["'None'"]:
-                --blackListFileName #echo ' '.join($blfiles)#
-            #end if
+        #if $blackListFileName:
+            --blackListFileName '$blackListFileName'
         #end if
 ]]>
     </command>
@@ -55,7 +48,7 @@
             label="Distance between bins"
             help="To reduce the computation time, not every possible genomic bin is sampled. This option allows you to set the distance between bins actually sampled from. Larger numbers are sufficient for high coverage samples, while smaller values are useful for lower coverage samples. Note that if you specify a value that results in too few (&lt;1000) reads sampled, the value will be decreased." />
 
-        <param argument="filterRNAstrand" type="select" label="Only include reads originating from fragments from the forward or reverse strand." 
+        <param argument="filterRNAstrand" type="select" label="Only include reads originating from fragments from the forward or reverse strand."
             help="By default (the no option), all reads are processed, regardless of the strand they originated from. For RNAseq, it can be useful to separately create bigWig files for the forward or reverse strands.
                   Note that this tools assumes that a dUTP-based method was used, so fragments will be assigned to the reverse strand if the second read in a pair is reverse complemented.">
             <option value="no" selected="true">no</option>

@@ -553,7 +553,8 @@ is vital to you, select Yes below.">
     </token>
 
     <xml name="blacklist">
-        <param argument="--blackListFileName" type="data" format="bed,gtf" optional="true" min="0"
+        <!-- the current rust-based function supports only a single blacklist file. Hence removed the multiple="true" attribute -->
+        <param argument="--blackListFileName" type="data" format="bed,gtf" optional="true"
             label="Blacklisted regions in BED/GTF format"
             help="One or more files containing regions to exclude from the analysis"/>
     </xml>
@@ -658,10 +659,9 @@ is vital to you, select Yes below.">
     </xml>
 
     <xml name="skipZeroOverZero">
-        <param argument="--skipZeroOverZero" type="select" label="Skip bins of no coverage"
-            help="Skip bins where BOTH files lack coverage.">
-            <option value="" selected="true">No</option>
-            <option value="--skipZeroOverZero">Yes, skip them.</option>
+        <param argument="--skipZeroOverZero" type="boolean" truevalue="--skipZeroOverZero" falsevalue="" checked="False"
+        label="Skip bins of no coverage"
+        help="Skip bins where BOTH files lack coverage.">
         </param>
     </xml>
 
