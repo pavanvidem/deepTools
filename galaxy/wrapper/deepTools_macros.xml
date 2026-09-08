@@ -5,7 +5,7 @@
     <token name="@GALAXY_VERSION@">23.2</token>
     <xml name="requirements">
         <requirements>
-            <container type="docker">quay.io/biocontainers/deeptools:4.0.0--py312ha170aba_0</container>
+            <requirement type="package" version="@TOOL_VERSION@">deeptools</requirement>
         </requirements>
         <expand macro="stdio"/>
         <version_command>@BINARY@ --version</version_command>
