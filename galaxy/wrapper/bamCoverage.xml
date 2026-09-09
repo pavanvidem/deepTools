@@ -1,7 +1,7 @@
 <tool id="deeptools_bam_coverage" name="bamCoverage" version="@TOOL_VERSION@+galaxy0" profile="@GALAXY_VERSION@">
     <description>generates a coverage bigWig file from a given BAM or CRAM file</description>
     <macros>
-        <token name="@BINARY@">bamCoverage</token>
+        <token name="@BINARY@">bamCoverage_old</token>
         <import>deepTools_macros.xml</import>
     </macros>
     <expand macro="requirements"/>
@@ -164,10 +164,6 @@
             <param name="outFileFormat" value="bedgraph"/>
             <param name="showAdvancedOpt" value="no"/>
             <param name="type" value="no"/>
-            <conditional name="advancedOpt">
-                <param name="showAdvancedOpt" value="yes"/>
-                <param name="ignoreDuplicates" value="true"/>
-            </conditional>
             <output name="outFileName" ftype="bedgraph">
                 <assert_contents>
                     <has_text_matching expression="3R\t0\t100\t0"/>
