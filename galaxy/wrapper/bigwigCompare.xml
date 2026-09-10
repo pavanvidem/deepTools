@@ -28,6 +28,7 @@
             #if $advancedOpt.showAdvancedOpt == "yes":
               $advancedOpt.no_collapse
               $advancedOpt.skipNAs
+              $advancedOpt.fixedStep
               $advancedOpt.skipZeroOverZero
               --scaleFactors '$advancedOpt.scaleFactor1:$advancedOpt.scaleFactor2'
               --binSize $advancedOpt.binSize
