@@ -94,6 +94,8 @@
                 <expand macro="no_collapse"/>
                 <expand macro="skipNAs"/>
                 <expand macro="skipZeroOverZero"/>
+                    <param argument="--fixedStep" type="boolean" truevalue="--fixedStep" falsevalue=""
+                        label ="Write out all bins instead of merging neighbouring bins with equal values"/>
                 <expand macro="scaleFactors"/>
                 <expand macro="blacklist"/>
             </when>
@@ -127,6 +129,17 @@
             <param name="comparison_select" value="ratio"/>
             <output name="outFileName" file="bigwigCompare_result2.bg" sort="true" ftype="bedgraph"/>
         </test>
+        <test expect_num_outputs="1">
+            <param name="bigwigFile1" value="test.bw" ftype="bigwig"/>
+            <param name="bigwigFile2" value="test.bw" ftype="bigwig"/>
+            <param name="showAdvancedOpt" value="yes"/>
+            <param name="outFileFormat" value="bedgraph"/>
+            <param name="fixedStep" value="true" />
+            <param name="binSize" value="10"/>
+            <param name="comparison_select" value="ratio"/>
+            <output name="outFileName" file="bigwigCompare_result2.bg" sort="true" ftype="bedgraph"/>
+        </test>
+        
     </tests>
     <help>
 <![CDATA[
