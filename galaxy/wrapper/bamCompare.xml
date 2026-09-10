@@ -30,11 +30,7 @@
 
             --binSize $binSize
 
-            #if $scaling.method == 'SES':
-                --scaleFactorsMethod SES
-                --sampleLength $scaling.sampleLength
-                --numberOfSamples $scaling.numberOfSamples
-            #elif $scaling.method == 'readCount':
+            #if $scaling.method == 'readCount':
                 --scaleFactorsMethod readCount
             #elif $scaling.method == 'own':
                 --scaleFactors '$scaling.scaleFactor1:$scaling.scaleFactor2'
@@ -83,17 +79,9 @@
             <param name="method" type="select"
                 label="Method to use for scaling the largest sample to the smallest">
                 <option value="readCount" selected="true">read count</option>
-                <option value="SES">signal extraction scaling (SES), check with plotFingerprint before using it!</option>
                 <option value="own">enter own scaling factors</option>
                 <option value="None">Don't scale reads. Samples can instead be normalized using one of the normalization methods</option>
             </param>
-            <when value="SES">
-                <param argument="--sampleLength" type="integer" value="1000" min="10"
-                    label="Length in bases used to sample the genome and compute the size or scaling factors."
-                    help="The default is fine. Only change it if you know what you are doing."/>
-                <param argument="--numberOfSamples" type="integer" value="100000" min="0"
-                    label="Number of samplings taken from the genome to compute the scaling factors"/>
-            </when>
             <when value="readCount"/>
             <when value="own">
                 <expand macro="scaleFactors"/>
