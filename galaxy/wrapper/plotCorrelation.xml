@@ -11,6 +11,7 @@
             --corData '$corData'
             --plotFile '$outFileName'
             --corMethod '$corMethod'
+            --labels #echo " ".join($labels)
             --whatToPlot '$plotting_type.whatToPlot'
             #if str($plotting_type.whatToPlot) == 'heatmap':
                 @HEATMAP_OPTIONS@
@@ -38,7 +39,7 @@
     <inputs>
         <param name="corData" format="deeptools_coverage_matrix" type="data" label="Matrix file from the multiBamSummary tool"/>
         <expand macro="corMethod" />
-
+        <expand macro="custom_sample_labels" />
         <conditional name="plotting_type" >
             <param argument="--whatToPlot" type="select" label="Plotting type">
                 <option value="heatmap" selected="True">Heatmap</option>

@@ -461,25 +461,25 @@ is vital to you, select Yes below.">
     </xml>
 
     <xml name="custom_sample_labels">
-	<conditional name="custom_sample_labels_conditional">
-        <param name="custom_labels_select" type="select" label="Would you like custom sample labels?" help="By default, the names of the samples in your history are used.">
-	    <option value="No" selected="true">No, use sample names in the history</option>
-	    <option value="Yes">Yes, I want to specify new labels</option>
-	</param>
-	<when value="No">
-	</when>
-	<when value="Yes">
-	    <param argument="--labels" type="text" label="Sample Labels" help="Labels, separated by a space. If your labels themselves contain spaces then please enclose them in quotes (e.g., &apos;sample 1&apos;; &apos;sample 2&apos;)">
-            <sanitizer>
-                <valid initial="string.letters,string.digits,string.whitespace">
-                    <add value="&apos;"/>
-                    <add value="_"/>
-                </valid>
-            </sanitizer>
-            <validator type="regex">[A-Za-z0-9 =-_/+]+</validator>
-        </param>
-	</when>
-        </conditional>
+        <conditional name="custom_sample_labels_conditional">
+            <param name="custom_labels_select" type="select" label="Would you like custom sample labels?" help="By default, the names of the samples in your history are used.">
+                <option value="No" selected="true">No, use sample names in the history</option>
+                <option value="Yes">Yes, I want to specify new labels</option>
+            </param>
+            <when value="No">
+            </when>
+            <when value="Yes">
+                <param argument="--labels" type="text" label="Sample Labels" help="Labels, separated by a space. If your labels themselves contain spaces then please enclose them in quotes (e.g., &apos;sample 1&apos;; &apos;sample 2&apos;)">
+                    <sanitizer>
+                        <valid initial="string.letters,string.digits,string.whitespace">
+                            <add value="&apos;"/>
+                            <add value="_"/>
+                        </valid>
+                    </sanitizer>
+                    <validator type="regex">[A-Za-z0-9 =-_/+]+</validator>
+                </param>
+            </when>
+            </conditional>
     </xml>
 
     <xml name="plotTitle">

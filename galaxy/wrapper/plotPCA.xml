@@ -10,6 +10,7 @@
         @BINARY@
             --corData '$corData'
             --plotTitle '$plotTitle'
+            --labels #echo " ".join($labels)
             --plotFile '$outFileName'
             --plotFileFormat '$outFileFormat'
             #if str($advancedOpt.showAdvancedOpt) == 'yes':
@@ -25,6 +26,7 @@
                 #if $advancedOpt.markers:
                     --markers $advancedOpt.markers
                 #end if
+                $advancedOpt.addLabels
                 $advancedOpt.ggplot
             #end if
             #if $outFileNameData
@@ -36,6 +38,7 @@
         <param name="corData" format="deeptools_coverage_matrix" type="data" label="Matrix file from the multiBamSummary or multiBigwigSummary tools"/>
         <expand macro="input_image_file_format" />
         <expand macro="plotTitle" />
+        <expand macro="custom_sample_labels" />
         <param argument="--outFileNameData" type="boolean" label="Save the matrix of PCA and eigenvalues underlying the plot."/>
         <conditional name="advancedOpt">
             <param name="showAdvancedOpt" type="select" label="Show advanced options" >
@@ -56,6 +59,9 @@
                     help="A list of colors for the symbols. Color names and html hex string (e.g., #eeff22) are accepted. The color names should be space separated. For example, --colors 'red blue green'. If not specified, the symbols will be given automatic colors." />
                 <param argument="--markers" type="text" label="Custom markers" value="" optional="True"
                     help="A list of markers for the symbols. (e.g., '&lt;','&gt;','o') are accepted. The marker values should be space separated. For example, 's' 'o' 's' 'o'. If not specified, the symbols will be given automatic shapes." />
+                <param argument="--addLabels" type="boolean" label="Add Labels to the plot" 
+                    help="If specified, the labels will be added next to points also legend is omitted." 
+                    truevalue="--addLabels" falsevalue="" />
                 <expand macro="ggplot" />
             </when>
         </conditional>
