@@ -67,7 +67,7 @@
                 <param argument="--binSize" type="integer" value="500" min="1"
                    label="Bin size in bases"
                    help="Length in bases for a window used to sample the genome."/>
-                <param argument="--numberOfSamples" type="integer" value="100000" min="1"
+                <param argument="--numberOfSamples" type="integer" value="500000" min="1"
                    label="Number of samples"
                    help="Number of samples taken from the genome to compute the scaling factors."/>
                 <expand macro="read_processing_options" />

@@ -91,7 +91,7 @@
             </param>
             <when value="no" />
             <when value="yes">
-                <param argument="--numberOfSamples" type="integer" value="100000" min="1"
+                <param argument="--numberOfSamples" type="integer" value="1000000" min="1"
                    label="Number of samples"
                    help="Number of samples taken from the genome to compute the scaling factors."/>
                 <expand macro="plotWidthHeight" PLOTWIDTH="15.0" PLOTHEIGHT="5.0" />

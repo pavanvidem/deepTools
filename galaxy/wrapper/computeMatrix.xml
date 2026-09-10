@@ -108,7 +108,7 @@
             </param>
 
             <when value="scale-regions" >
-                <param argument="--regionBodyLength" type="integer" value="500"
+                <param argument="--regionBodyLength" type="integer" value="1000"
                     label="Distance in bases to which all regions are going to be fit" help=""/>
                 <conditional name="regionStartLength">
                     <param name="regionStartLength_select" type="select" label="Set distance up- and downstream of the given regions">
@@ -117,11 +117,11 @@
                     </param>
                     <when value="no"/>
                     <when value="yes">
-                        <param argument="--beforeRegionStartLength" type="integer" value="1000" min="1"
+                        <param argument="--beforeRegionStartLength" type="integer" value="0" min="1"
                             label="Distance upstream of the region start position"
                             help="If the regions are genes, this would be the
                             distance upstream of the transcription start site."/>
-                        <param argument="--afterRegionStartLength" type="integer" value="1000" min="1"
+                        <param argument="--afterRegionStartLength" type="integer" value="0" min="1"
                             label="Distance downstream of the region end position"
                             help="If the regions are genes, this would be the
                             distance downstream of the transcription end site."/>
@@ -146,10 +146,10 @@
                     label="Discard any values after the region end"
                     help="This is useful to visualize the region end when not using the
                     scale-regions mode and when the reference-point is set to the TSS. (--nanAfterEnd)"/>
-                <param name="beforeRegionStartLength" type="integer" value="1000" min="1"
+                <param name="beforeRegionStartLength" type="integer" value="500" min="1"
                     label="Distance upstream of the start site of the regions defined in the region file"
                     help="If the regions are genes, this would be the distance upstream of the transcription start site. (--beforeRegionStartLength)"/>
-                <param name="afterRegionStartLength" type="integer" value="1000" min="1"
+                <param name="afterRegionStartLength" type="integer" value="1500" min="1"
                     label="Distance downstream of the end site of the given regions"
                     help="If the regions are genes, this would be the distance downstream of the transcription end site. (--afterRegionStartLength)"/>
             </when>
@@ -166,7 +166,7 @@
             </param>
             <when value="no"/>
             <when value="yes">
-                <param name="binSize" type="integer" value="50" min="1"
+                <param name="binSize" type="integer" value="10" min="1"
                     label="Length, in bases, of non-overlapping bins used for averaging the score over the regions length"
                     help="(--binSize)"/>
 
