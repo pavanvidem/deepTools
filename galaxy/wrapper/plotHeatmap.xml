@@ -91,6 +91,7 @@
                 --heatmapWidth $advancedOpt.heatmapWidth
                 --heatmapHeight $advancedOpt.heatmapHeight
 
+                --boxAroundHeatmaps $advancedOpt.boxAroundHeatmaps
                 --whatToShow '$advancedOpt.whatToShow'
 
                 --startLabel '$advancedOpt.startLabel'
@@ -195,6 +196,9 @@
                 <param argument="--heatmapHeight" type="float" value="25" min="3" max="100"
                     label="Heatmap height in cm" help="The minimum value is 3 and the maximum is 100."/>
 
+                <param argument="--boxAroundHeatmaps" type="boolean" truevalue="--boxAroundHeatmaps" falsevalue="" checked="true"
+                    label="Plot black boxes around the heatmaps" help="The default is to not plot black boxes around the heatmaps. Choosing this option will plot black boxes around the heatmaps."/>
+
                 <param argument="--whatToShow" type="select" label="What to show"
                     help ="The default is to include a summary or profile plot on top of the heatmap and a heatmap colorbar.">
                     <option value="plot, heatmap and colorbar" selected="true">summary plot, heatmap and colorbar</option>
@@ -261,6 +265,7 @@
         <test expect_num_outputs="1">
             <param name="matrixFile" value="computeMatrix_result1.gz" ftype="deeptools_compute_matrix_archive" />
             <param name="showAdvancedOpt" value="yes" />
+            <param name="boxAroundHeatmaps" value="false" />
             <param name="whatToShow" value="heatmap and colorbar" />
             <output name="outFileName" file="heatmapper_result2.png" ftype="png" compare="sim_size" delta="11000" />
         </test>
