@@ -249,16 +249,7 @@
 
                 <expand macro="ggplot" />
                 <expand macro="kmeans_clustering" />
-                <param argument="--clusterUsingSamples" type="text"
-                    label="List of samples to be used for clustering"
-                    help="List of sample numbers (order as in matrix), which are used by --kmeans or --hclust for clustering.
-                    If no value is set, it uses all samples. Example: 1 3 (space separated!)">
-                    <sanitizer>
-                        <valid initial="string.printable">
-                            <add value=" "/>
-                        </valid>
-                    </sanitizer>
-                </param>
+                <expand macro="clusterUsingSamples" />
             </when>
         </conditional>
     </inputs>

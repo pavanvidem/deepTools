@@ -55,6 +55,7 @@
                     --colors #echo ' '.join( ["'%s'" % $color for $color in $advancedOpt.colors.split()] )#
                 #end if
 
+                --numPlotsPerRow $advancedOpt.numPlotsPerRow
                 --legendLocation '$advancedOpt.legendLocation'
 
                 --labelRotation '$advancedOpt.labelRotation'
@@ -72,6 +73,10 @@
                     --outFileNameData '$output_outFileNameData'
                 #end if
 
+                #if str($advancedOpt.clusterUsingSamples).strip() != "":
+                    --clusterUsingSamples '$advancedOpt.clusterUsingSamples'
+                #end if
+                
                 $advancedOpt.ggplot
                 @KMEANS_CLUSTERING@
 
@@ -165,6 +170,8 @@
                     <validator type="expression"
                         message="Only numbers, digits, '#' and spaces are allowed.">all(c in ' #abcdefghijklmnopqrstuvwxyz0123456789' for c in value)</validator>
                 </param>
+                <param argument="--numPlotsPerRow" type="integer" value="8" min="1"
+                    label="Number of plots per row" help="" />
                 <expand macro="legendLocation" />
                 <expand macro="labelRotation" />
 
@@ -182,6 +189,7 @@
 
                 <expand macro="ggplot" />
                 <expand macro="kmeans_clustering" />
+                <expand macro="clusterUsingSamples" />
 
             </when>
         </conditional>
