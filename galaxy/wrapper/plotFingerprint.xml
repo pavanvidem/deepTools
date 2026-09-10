@@ -40,7 +40,6 @@
                 --binSize '$advancedOpt.binSize'
                 --numberOfSamples '$advancedOpt.numberOfSamples'
 
-                $advancedOpt.ignoreDuplicates
                 $advancedOpt.skipZeros
 
                 #if $advancedOpt.plotTitle and str($advancedOpt.plotTitle.value) != "":

@@ -45,7 +45,6 @@
         #else if $advancedOpt.doExtendCustom.doExtend == 'yes':
             --extendReads
         #end if
-        $advancedOpt.ignoreDuplicates
         $advancedOpt.centerReads
         #if $advancedOpt.minMappingQuality:
             --minMappingQuality $advancedOpt.minMappingQuality
@@ -211,7 +210,6 @@
 
     <xml name="read_processing_options">
         <expand macro="extendReads"/>
-        <expand macro="ignoreDuplicates"/>
         <expand macro="centerReads"/>
         <expand macro="minMappingQuality"/>
         <expand macro="samFlags"/>
