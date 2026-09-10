@@ -84,27 +84,20 @@
             </when>
         </conditional>
 
-        <conditional name="advancedOpt">
-            <param name="showAdvancedOpt" type="select" label="Show advanced options" >
-                <option value="no" selected="true">No</option>
-                <option value="yes">Yes</option>
-            </param>
-            <when value="no" />
-            <when value="yes">
-                <param argument="--numberOfSamples" type="integer" value="1000000" min="1"
-                   label="Number of samples"
-                   help="Number of samples taken from the genome to compute the scaling factors."/>
-                <expand macro="plotWidthHeight" PLOTWIDTH="15.0" PLOTHEIGHT="5.0" />
-                <expand macro="region_limit_operation" />
-                <expand macro="read_processing_options" />
-                <expand macro="skipZeros" />
-                <expand macro="plotTitle" />
-                <expand macro="blacklist" />
-                <expand macro="ggplot" />
-            </when>
-        </conditional>
+        <expand macro="advancedOpt_scaffold">
+            <param argument="--numberOfSamples" type="integer" value="1000000" min="1"
+                label="Number of samples"
+                help="Number of samples taken from the genome to compute the scaling factors."/>
+            <expand macro="plotWidthHeight" PLOTWIDTH="15.0" PLOTHEIGHT="5.0" />
+            <expand macro="region_limit_operation" />
+            <expand macro="read_processing_options" />
+            <expand macro="skipZeros" />
+            <expand macro="plotTitle" />
+            <expand macro="blacklist" />
+            <expand macro="ggplot" />
+        </expand>
         <expand macro="input_image_file_format" />
-        <param argument="--outRawCounts" type="boolean" label="Save raw counts (coverages) to a file" help=""/>
+        <expand macro="outRawCounts" />
     </inputs>
     <outputs>
         <expand macro="output_image_file_format_not_nested" />

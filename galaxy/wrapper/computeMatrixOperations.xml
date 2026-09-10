@@ -98,11 +98,11 @@
                 <option value="dataRange">Returns the min, max, median, 10th and 90th percentile of the matrix values per sample (dataRange)</option>
             </param>
             <when value="info">
-                <param argument="matrixFile" format="deeptools_compute_matrix_archive" type="data" label="Matrix file from the computeMatrix tool"/>
+                <expand macro="matrixFile" />
             </when>
 
             <when value="relabel">
-                <param argument="matrixFile" format="deeptools_compute_matrix_archive" type="data" label="Matrix file from the computeMatrix tool"/>
+                <expand macro="matrixFile" />
                 <param argument="groupLabels" type="text" optional="true" label="New Region/Group Labels."
                     help="If blank, the labels are left unchanged, otherwise they're changed to be those provided here. Multiple labels should be separated by spaces. If you provide labels, you must provide exactly one label for each group of regions."/>
                 <param argument="sampleLabels" type="text" optional="true" label="New Sample Labels."
@@ -110,7 +110,7 @@
             </when>
 
             <when value="subset">
-                <param argument="matrixFile" format="deeptools_compute_matrix_archive" type="data" label="Matrix file from the computeMatrix tool"/>
+                <expand macro="matrixFile" />
                 <param argument="groups" type="text" optional="true" label="Region groups to include."
                     help="If blank, all region groups are output. Alternatively, one or more groups listed in the output of the 'info' command can be used (separate groups by a space and enclose in quotes if needed)"/>
                 <param argument="samples" type="text" optional="true" label="Samples to include."
@@ -118,7 +118,7 @@
             </when>
 
             <when value="filterStrand">
-                <param argument="matrixFile" format="deeptools_compute_matrix_archive" type="data" label="Matrix file from the computeMatrix tool"/>
+                <expand macro="matrixFile" />
                 <param argument="--strand" type="select" label="Only include regions on this strand."
                     help="Only regions on the desired strand will be included in the output. If you desire to instead remove regions on only one strand (or the . strand), separately run this on the other strand and then use the rbind operation.">
                     <option value="+">+</option>
@@ -128,7 +128,7 @@
             </when>
 
             <when value="filterValues">
-                <param argument="matrixFile" format="deeptools_compute_matrix_archive" type="data" label="Matrix file from the computeMatrix tool"/>
+                <expand macro="matrixFile" />
                 <param argument="--min" type="float" optional="true" label="Minimum value"
                        help="Exclude any row in the matrix with a value below this. By default there is no minimum value."/>
                 <param argument="--max" type="float" optional="true" label="Maximum value"
@@ -137,18 +137,18 @@
 
             <when value="rbind">
                 <repeat name="matrixFiles" title="Matrix files from computeMatrix" min="2">
-                <param argument="matrixFile" format="deeptools_compute_matrix_archive" type="data" label="Matrix file from the computeMatrix tool"/>
+                    <expand macro="matrixFile" />
                 </repeat>
             </when>
 
             <when value="cbind">
                 <repeat name="matrixFiles" title="Matrix files from computeMatrix" min="2">
-                <param argument="matrixFile" format="deeptools_compute_matrix_archive" type="data" label="Matrix file from the computeMatrix tool"/>
+                    <expand macro="matrixFile" />
                 </repeat>
             </when>
 
             <when value="sort">
-                <param argument="matrixFile" format="deeptools_compute_matrix_archive" type="data" label="Matrix file from the computeMatrix tool"/>
+                <expand macro="matrixFile" />
                 <repeat name="regionsFiles" title="BED or GTF files of regions" min="1">
                     <param name="regionsFile" format="bed,gtf" type="data" label="Regions to plot"
                         help="File, in BED format, containing the regions to plot."/>
@@ -165,7 +165,7 @@
             </when>
 
             <when value="dataRange">
-                <param argument="matrixFile" format="deeptools_compute_matrix_archive" type="data" label="Matrix file from the computeMatrix tool"/>
+                <expand macro="matrixFile" />
             </when>
         </conditional>
     </inputs>

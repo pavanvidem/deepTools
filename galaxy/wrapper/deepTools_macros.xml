@@ -110,7 +110,7 @@
     </xml>
 
     <xml name="region_limit_operation">
-        <param argument="--region" type="text" value=""
+        <param argument="--region" type="text" value="" optional="true"
             label="Region of the genome to limit the operation to"
             help="This is useful when testing parameters to reduce the time required. The format is chr:start:end, for example &quot;chr10&quot; or &quot;chr10:456700:891000&quot;.">
             <sanitizer>
@@ -128,79 +128,6 @@
             label="Smooth values using the following length (in bases)"
             help ="The smooth length defines a window, larger than the bin size, over which the number of reads is to be averaged. For example, if the bin size is set to 20 and the smooth length is 60, then, for each bin, its value is set to the average of it and its left and right neighbors. Any value smaller than the bin size will be ignored and no smoothing will be applied."/>
     </xml>
-
-    <xml name="clusterUsingSamples">
-        <param argument="--clusterUsingSamples" type="text"
-            label="List of samples to be used for clustering"
-            help="List of sample numbers (order as in matrix), which are used by --kmeans or --hclust for clustering.
-            If no value is set, it uses all samples. Example: 1 3 (space separated!)">
-            <sanitizer>
-                <valid initial="string.printable">
-                    <add value=" "/>
-                </valid>
-            </sanitizer>
-        </param>
-    </xml>
-
-    <xml name="kmeans_clustering">
-        <conditional name="used_multiple_regions">
-            <param name="used_multiple_regions_options" type="select"
-                label="Did you compute the matrix with more than one groups of regions?"
-                help="Would you like to cluster the regions according to the similarity of the signal distribution? This is only possible if you used computeMatrix on only one group of regions.">
-                <option value="yes">Yes, I used multiple groups of regions</option>
-                <option value="no">No, I used only one group</option>
-            </param>
-            <when value="no">
-                <conditional name="clustering">
-                    <param name="clustering_options" type="select" label="Clustering algorithm">
-                        <option value="none">No clustering</option>
-                        <option value="kmeans">Kmeans clustering</option>
-                        <option value="hclust">Hierarchical clustering</option>
-                    </param>
-                    <when value="kmeans">
-                        <param name="k_kmeans" type="integer" value="0" label="Number of clusters to compute"
-                            help="When this option is set, the matrix is split into clusters using the k-means algorithm.
-                            This only works for data that is not grouped, otherwise only the first group will be clustered.
-                            If more specific clustering methods are required it is advisable to save the underlying matrix and
-                            run the clustering using other software."/>
-                    </when>
-                    <when value="hclust">
-                        <param name="n_hclust" type="integer" value="0" label="number of clusters to compute."
-                            help="WARNING: This option causes the tool to run for a very long time! When this option is
-                            set, the matrix is split into clusters using the hierarchical clustering algorithm, using ward linkage.
-                            This only works for data that is not grouped, otherwise only the first group will be clustered.
-                            Note that you must have used the '--missingDataAsZero' option within computeMatrix!
-                            If more specific clustering methods are required it is advisable to save the underlying matrix and
-                            run the clustering using other software."/>
-                    </when>
-                    <when value="none"/>
-                </conditional>
-                <param argument="--silhouette" type="boolean" truevalue="--silhouette" falsevalue=""
-                    label="Compute the silhouette score for each region"
-                    help="Compute the silhouette score for regions. This is only applicable if clustering has been performed.
-                    The silhouette score is a measure of how similar a region is to other regions in the same cluster as
-                    opposed to those in other clusters. It will be reported in the final column of the BED file with regions.
-                    The silhouette evaluation can be very slow when you have more than 100 000 regions."/>
-            </when>
-            <when value="yes"/>
-        </conditional>
-    </xml>
-
-    <token name="@KMEANS_CLUSTERING@">
-        #if $advancedOpt.used_multiple_regions.used_multiple_regions_options == 'no':
-            #if $advancedOpt.used_multiple_regions.clustering.clustering_options == 'kmeans':
-                #if int($advancedOpt.used_multiple_regions.clustering.k_kmeans) > 0:
-                    --kmeans $advancedOpt.used_multiple_regions.clustering.k_kmeans
-                #end if
-            #end if
-            #if $advancedOpt.used_multiple_regions.clustering.clustering_options == 'hclust':
-                #if int($advancedOpt.used_multiple_regions.clustering.n_hclust) > 0:
-                    --hclust $advancedOpt.used_multiple_regions.clustering.n_hclust
-                #end if
-            #end if
-            $advancedOpt.used_multiple_regions.silhouette
-        #end if
-    </token>
 
     <xml name="samFlags">
         <param argument="--samFlagInclude" type="integer" optional="True" value=""
@@ -283,8 +210,8 @@
         </param>
     </xml>
 
-    <xml name="distanceBetweenBins">
-        <param argument="--distanceBetweenBins" type="integer" value="0" min="0"
+    <xml name="distanceBetweenBins" tokens="DISTANCE">
+        <param argument="--distanceBetweenBins" type="integer" value="@DISTANCE@" min="0"
             label="Distance between bins"
             help="By default, multiBamSummary considers consecutive bins of
                 the specified 'Bin size'. However, to reduce the
@@ -397,6 +324,66 @@
             label ="Use ggplot theme for figures" />
     </xml>
 
+    <xml name="region_file">
+        <param name="region_file" type="data" format="bed,gtf" 
+        label="Region file in BED or INTERVAL format"
+        help="Coverage is computed for the number of reads that overlap such regions."/>
+    </xml>
+
+    <xml name="outRawCounts">
+        <param argument="--outRawCounts" type="boolean" label="Save raw counts (coverages) to file" help="" />
+    </xml>
+
+    <xml name="multiSummary_common_params">
+        <expand macro="custom_sample_labels" />
+        <conditional name="mode">
+            <param name="modeOpt" type="select" label="Choose computation mode"
+                help="In the bins mode, the correlation is computed using equally sized bins.
+                In the BED file mode, a list of genomic regions in BED format has to be given.
+                For each region in the BED file, the number of overlapping reads is counted in
+                each of the BAM/BigWig files. Then the correlation is computed.">
+                <option value="bins" selected="true">Bins</option>
+                <option value="BED-file">Limit correlation to certain regions (BED file)</option>
+            </param>
+            <when value="bins">
+                <param name="binSize" type="integer" value="10000" min="1"
+                    label="Bin size in bp"
+                    help="Length in bases for a window used to sample the genome. (--binSize)"/>
+
+                <expand macro="distanceBetweenBins" DISTANCE="0"/>
+            </when>
+            <when value="BED-file">
+                <expand macro="region_file" />
+            </when>
+        </conditional>
+        <expand macro="region_limit_operation" />
+        <expand macro="outRawCounts" />
+    </xml>
+
+    <token name="@MULTISUMMARY_COMMON_PARAMS@">
+        $mode.modeOpt
+
+        --outFileName '$outFile'
+        #if $custom_sample_labels_conditional.custom_labels_select == 'Yes'
+            --labels #echo ' '.join($custom_sample_labels_conditional.labels)#
+        #end if
+
+        #if $outRawCounts:
+            --outRawCounts '$outFileRawCounts'
+        #end if
+
+        #if $mode.modeOpt == "bins":
+            --binSize $mode.binSize
+            --distanceBetweenBins $mode.distanceBetweenBins
+        #else:
+            --BED '$mode.region_file'
+        #end if
+
+        #if $region:
+            --region '$region'
+        #end if
+    </token>
+
     <token name="@REFERENCES@">
 
 .. class:: infomark
@@ -487,29 +474,6 @@ is vital to you, select Yes below.">
             label="Title of the plot"
             help="Title of the plot, to be printed on top of the generated image."/>
     </xml>
-
-    <xml name="legendLocation">
-        <param argument="--legendLocation" type="select" label="Legend location" help="Location for the legend in the summary plot. Note that none cannot be used in plotProfile.">
-            <option value="best" selected="true">Best (automatic)</option>
-            <option value="upper-right">upper-right</option>
-            <option value="upper-left">upper-left</option>
-            <option value="upper-center">upper-center</option>
-            <option value="lower-right">lower-right</option>
-            <option value="lower-left">lower-left</option>
-            <option value="lower-center">lower-center</option>
-            <option value="center-right">center-right</option>
-            <option value="center-left">center-left</option>
-            <option value="center">center</option>
-            <option value="none">none (only works for heatmaps</option>
-        </param>
-    </xml>
-
-    <xml name="labelRotation">
-        <param argument="--labelRotation" type="integer" value="0"
-            label="Rotation of the X-axis labels (in degrees)"
-            help="The rotation of things like TSS or TES on the X-axis of profile plots in both plotHeatmap and plotProfile. The default is 0, positive values denome a counter-clockwise rotation."/>
-    </xml>
-
 
     <token name="@multiple_input_bams@">
 <![CDATA[
@@ -755,6 +719,10 @@ is vital to you, select Yes below.">
         </data>
     </xml>
 
+    <xml name="matrixFile">
+        <param argument="matrixFile" format="deeptools_compute_matrix_archive" type="data" label="Matrix file from the computeMatrix tool"/>
+    </xml>
+    
     <xml name="output_save_matrix_values">
         <data format="tabular" name="outFileNameMatrix" label="${tool.name} on ${on_string}: Heatmap values">
             <filter>
@@ -960,5 +928,160 @@ is vital to you, select Yes below.">
         <param argument="--no_collapse" type="boolean" truevalue="--no_collapse" falsevalue="" checked="true"
             label="Adjacent bins that have the same value are collapsed"
             help="This reduces the size of the output file (drastically)"/>
+    </xml>
+
+
+    <token name="@HEATMAP_PROFILER_PARAMS@">
+        #if $advancedOpt.plotTitle:
+            --plotTitle '$advancedOpt.plotTitle'
+        #end if
+        $advancedOpt.perGroup
+        #if $advancedOpt.samplesLabel:
+            --samplesLabel '$advancedOpt.samplesLabel'
+        #end if
+        #if $advancedOpt.startLabel:
+            --startLabel '$advancedOpt.startLabel'
+        #end if
+        #if $advancedOpt.endLabel:
+            --endLabel '$advancedOpt.endLabel'
+        #end if
+        #if $advancedOpt.refPointLabel:
+            --refPointLabel '$advancedOpt.refPointLabel'
+        #end if
+          #if $advancedOpt.regionsLabel:
+                --regionsLabel '$advancedOpt.regionsLabel'
+        #end if
+        #if $advancedOpt.yMin:
+            --yMin $advancedOpt.yMin
+        #end if
+        #if $advancedOpt.yMax:
+            --yMax $advancedOpt.yMax
+        #end if
+        --legendLocation '$advancedOpt.legendLocation'
+        --labelRotation '$advancedOpt.labelRotation'
+        $advancedOpt.ggplot
+        #if $advancedOpt.used_multiple_regions.used_multiple_regions_options == 'no':
+            #if $advancedOpt.used_multiple_regions.clustering.clustering_options == 'kmeans':
+                #if int($advancedOpt.used_multiple_regions.clustering.k_kmeans) > 0:
+                    --kmeans $advancedOpt.used_multiple_regions.clustering.k_kmeans
+                #end if
+            #end if
+            #if $advancedOpt.used_multiple_regions.clustering.clustering_options == 'hclust':
+                #if int($advancedOpt.used_multiple_regions.clustering.n_hclust) > 0:
+                    --hclust $advancedOpt.used_multiple_regions.clustering.n_hclust
+                #end if
+            #end if
+            $advancedOpt.used_multiple_regions.silhouette
+        #end if
+        #if $advancedOpt.clusterUsingSamples:
+            --clusterUsingSamples '$advancedOpt.clusterUsingSamples'
+        #end if
+    </token>
+
+    <xml name="heatmap_profiler_params">
+        <expand macro="plotTitle" />
+        <param argument="--perGroup" type="boolean" truevalue="--perGroup" falsevalue=""
+            label="Make one plot per group of regions"
+            help="The default is to make one plot per bigWig file, i.e., all samples next to each other. Choosing this option will make one plot per group of regions. " />
+        <param argument="--samplesLabel" type="text"
+            label="Labels for the samples (each bigwig) plotted"
+            help="The default is to use the file name of the sample. The sample labels should be separated by
+            spaces and quoted if a label itself contains a space, e.g., label-1 &quot;label 2&quot;">
+            <sanitizer>
+                <valid initial="string.printable">
+                </valid>
+            </sanitizer>
+        </param>
+        <param argument="--startLabel" type="text" value="TSS" optional="true"
+            label="Label shown in the plot for the start of the region"
+            help ="Only for scale-regions mode. Default is TSS (transcription start site),
+            but could be changed to anything, e.g. &quot;peak start&quot;." />
+        <param argument="--endLabel" type="text" value="TES" optional="true"
+            label="Label shown in the plot for the region end"
+            help="Only for scale-regions mode. Default is TES (transcription end site)."/>
+        <param argument="--refPointLabel" type="text" optional="true" value=""
+            label="Label shown in the plot for the reference-point"
+            help ="only for reference-point mode. Default is the same as the reference point selected (e.g. TSS), 
+            but could be anything, e.g. &quot;peak start&quot; etc." />
+        <param argument="--regionsLabel" type="text"
+            label="Labels for the regions plotted in the heatmap"
+            help="If more than one region is being plotted a list of labels separated by space is required.
+                    If a label itself contains a space, then quotes are needed.
+                    For example, label_1 &quot;label 2&quot;" />
+
+        <param argument="--yMin" type="float" value="" optional="True"
+            label="Minimum value for the Y-axis of the summary plot. Leave empty for automatic values" help=""/>
+        <param argument="--yMax" type="float" value="" optional="True"
+            label="Maximum value for Y-axis of the summary plot. Leave empty for automatic values" help=""/>
+        <param argument="--legendLocation" type="select" label="Legend location" help="Location for the legend in the summary plot. Note that none cannot be used in plotProfile.">
+            <option value="best" selected="true">Best (automatic)</option>
+            <option value="upper-right">upper-right</option>
+            <option value="upper-left">upper-left</option>
+            <option value="upper-center">upper-center</option>
+            <option value="lower-right">lower-right</option>
+            <option value="lower-left">lower-left</option>
+            <option value="lower-center">lower-center</option>
+            <option value="center-right">center-right</option>
+            <option value="center-left">center-left</option>
+            <option value="center">center</option>
+            <option value="none">none (only works for heatmaps)</option>
+        </param>
+        <param argument="--labelRotation" type="integer" value="0"
+            label="Rotation of the X-axis labels (in degrees)"
+            help="The rotation of things like TSS or TES on the X-axis of profile plots in both plotHeatmap and plotProfile. The default is 0, positive values denome a counter-clockwise rotation."/>
+        <expand macro="ggplot" />
+
+        <!--clustering params-->
+        <conditional name="used_multiple_regions">
+            <param name="used_multiple_regions_options" type="select"
+                label="Did you compute the matrix with more than one groups of regions?"
+                help="Would you like to cluster the regions according to the similarity of the signal distribution? This is only possible if you used computeMatrix on only one group of regions.">
+                <option value="yes">Yes, I used multiple groups of regions</option>
+                <option value="no">No, I used only one group</option>
+            </param>
+            <when value="no">
+                <conditional name="clustering">
+                    <param name="clustering_options" type="select" label="Clustering algorithm">
+                        <option value="none">No clustering</option>
+                        <option value="kmeans">Kmeans clustering</option>
+                        <option value="hclust">Hierarchical clustering</option>
+                    </param>
+                    <when value="kmeans">
+                        <param name="k_kmeans" type="integer" value="0" label="Number of clusters to compute"
+                            help="When this option is set, the matrix is split into clusters using the k-means algorithm.
+                            This only works for data that is not grouped, otherwise only the first group will be clustered.
+                            If more specific clustering methods are required it is advisable to save the underlying matrix and
+                            run the clustering using other software."/>
+                    </when>
+                    <when value="hclust">
+                        <param name="n_hclust" type="integer" value="0" label="number of clusters to compute."
+                            help="WARNING: This option causes the tool to run for a very long time! When this option is
+                            set, the matrix is split into clusters using the hierarchical clustering algorithm, using ward linkage.
+                            This only works for data that is not grouped, otherwise only the first group will be clustered.
+                            Note that you must have used the '--missingDataAsZero' option within computeMatrix!
+                            If more specific clustering methods are required it is advisable to save the underlying matrix and
+                            run the clustering using other software."/>
+                    </when>
+                    <when value="none"/>
+                </conditional>
+                <param argument="--silhouette" type="boolean" truevalue="--silhouette" falsevalue=""
+                    label="Compute the silhouette score for each region"
+                    help="Compute the silhouette score for regions. This is only applicable if clustering has been performed.
+                    The silhouette score is a measure of how similar a region is to other regions in the same cluster as
+                    opposed to those in other clusters. It will be reported in the final column of the BED file with regions.
+                    The silhouette evaluation can be very slow when you have more than 100 000 regions."/>
+            </when>
+            <when value="yes"/>
+        </conditional>
+        <param argument="--clusterUsingSamples" type="text"
+            label="List of samples to be used for clustering"
+            help="List of sample numbers (order as in matrix), which are used by --kmeans or --hclust for clustering.
+            If no value is set, it uses all samples. Example: 1 3 (space separated!)">
+            <sanitizer>
+                <valid initial="string.printable">
+                    <add value=" "/>
+                </valid>
+            </sanitizer>
+        </param>
     </xml>
 </macros>

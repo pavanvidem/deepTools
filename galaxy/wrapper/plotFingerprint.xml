@@ -57,26 +57,19 @@
         <expand macro="custom_sample_labels" />
         <expand macro="region_limit_operation" />
 
-        <conditional name="advancedOpt">
-            <param name="showAdvancedOpt" type="select" label="Show advanced options" >
-                <option value="no" selected="true">no</option>
-                <option value="yes">yes</option>
-            </param>
-            <when value="no" />
-            <when value="yes">
-                <param argument="--binSize" type="integer" value="500" min="1"
-                   label="Bin size in bases"
-                   help="Length in bases for a window used to sample the genome."/>
-                <param argument="--numberOfSamples" type="integer" value="500000" min="1"
-                   label="Number of samples"
-                   help="Number of samples taken from the genome to compute the scaling factors."/>
-                <expand macro="read_processing_options" />
-                <expand macro="skipZeros" />
-                <expand macro="plotTitle" />
-                <expand macro="blacklist" />
-                <expand macro="ggplot" />
-            </when>
-        </conditional>
+        <expand macro="advancedOpt_scaffold">
+            <param argument="--binSize" type="integer" value="500" min="1"
+                label="Bin size in bases"
+                help="Length in bases for a window used to sample the genome."/>
+            <param argument="--numberOfSamples" type="integer" value="500000" min="1"
+                label="Number of samples"
+                help="Number of samples taken from the genome to compute the scaling factors."/>
+            <expand macro="read_processing_options" />
+            <expand macro="skipZeros" />
+            <expand macro="plotTitle" />
+            <expand macro="blacklist" />
+            <expand macro="ggplot" />
+        </expand>
 
         <conditional name="output">
             <param name="showOutputSettings" type="select" label="Show advanced output settings">
@@ -86,6 +79,7 @@
             <when value="no" />
             <when value="yes">
                 <expand macro="input_image_file_format" />
+                <expand macro="outRawCounts" />
                 <param name="saveRawCounts" type="boolean" label="Save the bin counts" help="(--outRawCounts)"/>
                 <param name="saveQualityMetrics" type="boolean" label="Save quality metrics"
                    help="The file will have one row per input BAM file and columns containing a variety of QC metrics. For the full description of all metrics and their interpretation, please see our online documentation: http://deeptools.readthedocs.io/en/latest/content/feature/plotFingerprint_QC_metrics.html. (--outQualityMetrics)"/>
@@ -101,7 +95,7 @@
             <filter>
             ((
                 output['showOutputSettings'] == 'yes' and
-                output['saveRawCounts'] is True
+                output['outRawCounts'] is True
             ))
             </filter>
         </data>

@@ -135,28 +135,21 @@
             <option value="bedgraph">bedgraph</option>
         </param>
         <expand macro="region_limit_operation"/>
-        <conditional name="advancedOpt">
-            <param name="showAdvancedOpt" type="select" label="Show advanced options" >
-                <option value="no" selected="true">no</option>
-                <option value="yes">yes</option>
-            </param>
-            <when value="no"/>
-            <when value="yes">
-                <expand macro="smoothLength"/>
-                <expand macro="read_processing_options"/>
-                <expand macro="no_collapse"/>
-                <expand macro="skipNAs"/>
-                <expand macro="skipZeroOverZero"/>
+        <expand macro="advancedOpt_scaffold">
+            <expand macro="smoothLength"/>
+            <expand macro="read_processing_options"/>
+            <expand macro="no_collapse"/>
+            <expand macro="skipNAs"/>
+            <expand macro="skipZeroOverZero"/>
 
-                <param argument="--ignoreForNormalization" type="text" value="" size="50"
-                    label="regions that should be excluded for calculating the scaling factor"
-                    help="Sometimes it makes sense to exclude certain regions when calculating the scaling factor.
-                        For example, if you know of copy number variations between samples then you may want to exclude these.
-                        Another typical example is the difference in chromosome X copies between males and females in many species.
-                        Example inputs are chrX,chrY,chr3 or chr10:12220-128932"/>
-                <expand macro="blacklist"/>
-            </when>
-        </conditional>
+            <param argument="--ignoreForNormalization" type="text" value="" size="50"
+                label="regions that should be excluded for calculating the scaling factor"
+                help="Sometimes it makes sense to exclude certain regions when calculating the scaling factor.
+                    For example, if you know of copy number variations between samples then you may want to exclude these.
+                    Another typical example is the difference in chromosome X copies between males and females in many species.
+                    Example inputs are chrX,chrY,chr3 or chr10:12220-128932"/>
+            <expand macro="blacklist"/>
+        </expand>
     </inputs>
     <outputs>
         <data format="bigwig" name="outFileName">
