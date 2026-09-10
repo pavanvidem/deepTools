@@ -59,6 +59,9 @@
             #if $advancedOpt.showAdvancedOpt == "yes":
                 --sortRegions '$advancedOpt.sortRegions'
                 --sortUsing '$advancedOpt.sortUsing'
+                #if str($advancedOpt.sortUsingSamples).strip() != "":
+                    --sortUsingSamples '$advancedOpt.sortUsingSamples'
+                #end if                
                 --averageTypeBins '$advancedOpt.averageTypeBins'
                 $advancedOpt.skipZeros
                 $advancedOpt.missingDataAsZero
@@ -169,6 +172,7 @@
 
                 <expand macro="sortRegionsComputeMatrix"/>
                 <expand macro="sortUsing"/>
+                <expand macro="sortUsingSamples" />
 
                 <param name="averageTypeBins" type="select"
                     label="Define the type of statistic that should be displayed."
