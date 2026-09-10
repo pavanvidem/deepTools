@@ -70,6 +70,12 @@
                 #end for
                 -m $submodule.matrixFile
                 -R '#echo "' '".join($files)#'
+                #if $submodule.transcriptID:
+                    --transcriptID $submodule.transcriptID
+                #end if
+                #if $submodule.transcript_id_designator:
+                    --transcript_id_designator $submodule.transcript_id_designator
+                #end if
                 -o $outFileName
             #else if $submodule.command == "dataRange":
                 dataRange
@@ -147,6 +153,15 @@
                     <param name="regionsFile" format="bed,gtf" type="data" label="Regions to plot"
                         help="File, in BED format, containing the regions to plot."/>
                 </repeat>
+                <param argument="--transcriptID" optional="True" value="transcript" type="text"
+                    label="transcript designator"
+                    help="When a GTF file is used to provide regions, only entries with this value as their feature (column 3) will be processed as transcripts. Default: transcript"/>
+                <param argument="--transcript_id_designator" optional="True" value="transcript_id" type="text"
+                    label="transcriptID key designator"
+                    help="Each region has an ID (e.g., ACTB) assigned to it, which for BED files is either column 4 (if it exists)
+                        or the interval bounds. For GTF files this is instead stored in the last column as a key:value pair (e.g.,
+                        as 'transcript_id ACTB', for a key of transcript_id and a value of ACTB). In some cases it can be
+                        convenient to use a different identifier. To do so, set this to the desired key. Default: transcript_id"/>
             </when>
 
             <when value="dataRange">

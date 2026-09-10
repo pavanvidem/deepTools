@@ -30,6 +30,7 @@
             #if str($region).strip() != '':
                 --region '$region'
             #end if
+            --binSize $binSize
             --correctedFile corrected.bam
 ]]>
     </command>
@@ -40,6 +41,12 @@
         <expand macro="reference_genome_source"/>
         <expand macro="effectiveGenomeSize"/>
         <expand macro="region_limit_operation"/>
+        <expand macro="region_limit_operation"/>
+        <param argument="--binSize" type="integer" value="50" min="1"
+            label="Bin size in bases"
+            help="The genome will be divided into bins of the specified size. 
+                For each bin, the overlapping number of fragments (or reads) will be reported.
+                If only half a fragment overlaps then this fraction will be reported."/>
     </inputs>
     <outputs>
         <data format="bam" from_work_dir="corrected.bam" name="outFileName"/>
