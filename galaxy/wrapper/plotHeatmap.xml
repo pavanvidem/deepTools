@@ -98,7 +98,9 @@
                 --startLabel '$advancedOpt.startLabel'
                 --endLabel '$advancedOpt.endLabel'
 
-                --refPointLabel '$advancedOpt.referencePointLabel'
+                #if str($advancedOpt.refPointLabel).strip() != "":
+                    --refPointLabel '$advancedOpt.refPointLabel'
+                #end if
 
                 #if $advancedOpt.samplesLabel and str($advancedOpt.samplesLabel).strip() != "":
                     --samplesLabel $advancedOpt.samplesLabel
@@ -221,8 +223,7 @@
                 <param argument="--endLabel" type="text" value="TES"
                     label="Label for the region end"
                     help="Only for scale-regions mode. Label shown in the plot for the region end. Default is TES (transcription end site)."/>
-
-                <param argument="--referencePointLabel" type="text" value="TSS"
+                <param argument="--refPointLabel" type="text" optional="true" value=""
                     label="Reference point label"
                     help ="Label shown in the plot for the reference-point. Default is the same as the reference point selected (e.g. TSS), but could be anything, e.g. &quot;peak start&quot; etc." />
                 <param argument="--samplesLabel" type="text"

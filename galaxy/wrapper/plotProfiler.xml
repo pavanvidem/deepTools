@@ -27,9 +27,10 @@
                 --plotFileFormat 'png'
             #end if
 
-            #if $scaleRegions.showScaleRegionsOpt == "yes":
-                --startLabel '$scaleRegions.startLabel'
-                --endLabel '$scaleRegions.endLabel'
+            --startLabel '$startLabel'
+            --endLabel '$endLabel'
+            #if str($refPointLabel).strip() != "":
+                --refPointLabel '$refPointLabel'
             #end if
 
             #if $advancedOpt.showAdvancedOpt == "yes":
@@ -85,23 +86,17 @@
     </command>
     <inputs>
         <param argument="--matrixFile" format="deeptools_compute_matrix_archive" type="data" label="Matrix file from the computeMatrix tool"/>
-        <conditional name="scaleRegions">
-            <param name="showScaleRegionsOpt" type="select" label="The input matrix was computed in scale-regions mode">
-                <option value="no" selected="true">no</option>
-                <option value="yes">yes</option>
-            </param>
-            <when value="no" />
-            <when value="yes">
-                <param argument="--startLabel" type="text" value="TSS" size="10"
-                    label="Label for the region start"
-                    help ="Label shown in the plot
-                    for the start of the region. Default is TSS (transcription start site),
-                    but could be changed to anything, e.g. &quot;peak start&quot;." />
-                <param argument="--endLabel" type="text" value="TES" size="10"
-                    label="Label for the region end"
-                    help="Label shown in the plot for the region end. Default is TES (transcription end site)."/>
-            </when>
-        </conditional>
+        <param argument="--startLabel" type="text" value="TSS" optional="true"
+            label="Label shown in the plot for the start of the region"
+            help ="Only for scale-regions mode. Default is TSS (transcription start site),
+            but could be changed to anything, e.g. &quot;peak start&quot;." />
+        <param argument="--endLabel" type="text" value="TES" optional="true"
+            label="Label shown in the plot for the region end"
+            help="Only for scale-regions mode. Default is TES (transcription end site)."/>
+        <param argument="--refPointLabel" type="text" optional="true" value=""
+            label="Label shown in the plot for the reference-point"
+            help ="only for reference-point mode. Default is the same as the reference point selected (e.g. TSS), 
+            but could be anything, e.g. &quot;peak start&quot; etc." />
 
         <expand macro="input_graphic_output_settings">
             <expand macro="input_image_file_format" />
@@ -204,17 +199,19 @@
 
     </outputs>
     <tests>
-        <test expect_num_outputs="1">
-            <param name="matrixFile" value="computeMatrix_result1.gz" ftype="deeptools_compute_matrix_archive" />
-            <output name="outFileName" file="profiler_result1.png" ftype="png" compare="sim_size" delta="4000" />
-        </test>
         <test expect_num_outputs="2">
             <param name="matrixFile" value="computeMatrix_result1.gz" ftype="deeptools_compute_matrix_archive" />
             <param name="showAdvancedOpt" value="yes" />
-            <param name="showScaleRegionsOpt" value="yes" />
             <param name="outFileNameData" value="True" />
+            <param name="startLabel" value="TSS" />
+            <param name="endLabel" value="TES" />
+            <output name="outFileName" file="profiler_result1.png" ftype="png" compare="sim_size" delta="4000" />
+            <output name="output_outFileNameData" file="profiler_result1.tabular" ftype="tabular" />
+        </test>
+        <test expect_num_outputs="1">
+            <param name="matrixFile" value="computeMatrix_result2.gz" ftype="deeptools_compute_matrix_archive" />
+            <param name="refPointLabel" value="REF" />
             <output name="outFileName" file="profiler_result2.png" ftype="png" compare="sim_size" delta="4000" />
-            <output name="output_outFileNameData" file="profiler_result2.tabular" ftype="tabular" />
         </test>
     </tests>
     <help>
