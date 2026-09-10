@@ -45,6 +45,7 @@
                 #if $advancedOpt.plotTitle and str($advancedOpt.plotTitle.value) != "":
                     --plotTitle '$advancedOpt.plotTitle'
                 #end if
+                $advancedOpt.ggplot
                 @ADVANCED_OPTS_READ_PROCESSING@
                 @blacklist@
             #end if
@@ -73,6 +74,7 @@
                 <expand macro="skipZeros" />
                 <expand macro="plotTitle" />
                 <expand macro="blacklist" />
+                <expand macro="ggplot" />
             </when>
         </conditional>
 

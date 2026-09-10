@@ -116,6 +116,7 @@
                 --labelRotation '$advancedOpt.labelRotation'
 
                 $advancedOpt.perGroup
+                $advancedOpt.ggplot
 
                 @KMEANS_CLUSTERING@
 
@@ -238,6 +239,7 @@
                     label="Make one plot per group of regions"
                     help="The default is to make one plot per bigWig file, i.e., all samples next to each other. Choosing this option will make one plot per group of regions."/>
 
+                <expand macro="ggplot" />
                 <expand macro="kmeans_clustering" />
                 <param argument="--clusterUsingSamples" type="text"
                     label="List of samples to be used for clustering"

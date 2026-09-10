@@ -33,6 +33,7 @@
                 #if $advancedOpt.outRawFragmentLengths
                     --outRawFragmentLengths '$fragLengths'
                 #end if
+                $advancedOpt.ggplot
             #end if
             > '$outfile'
 ]]>
@@ -78,6 +79,7 @@
                     label="Maximum fragment length"
                     help="Maximum fragment length included in the histogram. A value of 0 (the default) denotes twice the mean fragment length"/>
                 <expand macro="blacklist"/>
+                <expand macro="ggplot" />
             </when>
         </conditional>
 
