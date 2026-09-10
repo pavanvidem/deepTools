@@ -49,10 +49,6 @@
 
                 $advancedOpt.variableScales
 
-                $advancedOpt.perSample
-
-                $advancedOpt.variableScales
-
                 --plotWidth '$advancedOpt.plotWidth'
 
                 --plotHeight '$advancedOpt.plotHeight'
