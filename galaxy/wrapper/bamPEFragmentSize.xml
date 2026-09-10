@@ -90,7 +90,6 @@
                 <when input="outFileFormat" value="pdf" format="pdf"/>
                 <when input="outFileFormat" value="svg" format="svg"/>
                 <when input="outFileFormat" value="eps" format="eps"/>
-                <when input="outFileFormat" value="plotly" format="html"/>
             </change_format>
         </data>
         <data name="table" format="tabular" label="${tool.name} on ${on_string}: Read/Fragment metrics in tabular format">

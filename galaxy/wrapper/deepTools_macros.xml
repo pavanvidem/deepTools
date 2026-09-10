@@ -691,12 +691,11 @@ is vital to you, select Yes below.">
 
 
     <xml name="input_image_file_format">
-        <param argument="--outFileFormat" type="select" label="Image file format" help="Note that the plotly output can be very large and not all options are supported.">
+        <param argument="--outFileFormat" type="select" label="Image file format">
             <option value="png" selected="true">png</option>
             <option value="pdf">pdf</option>
             <option value="svg">svg</option>
             <option value="eps">eps</option>
-            <option value="plotly">plotly</option>
         </param>
     </xml>
 
@@ -711,7 +710,6 @@ is vital to you, select Yes below.">
                 <when input="output.outFileFormat" value="pdf" format="pdf"/>
                 <when input="output.outFileFormat" value="svg" format="svg"/>
                 <when input="output.outFileFormat" value="eps" format="eps"/>
-                <when input="output.outFileFormat" value="plotly" format="html"/>
             </change_format>
         </data>
     </xml>
@@ -722,7 +720,6 @@ is vital to you, select Yes below.">
                 <when input="outFileFormat" value="pdf" format="pdf"/>
                 <when input="outFileFormat" value="svg" format="svg"/>
                 <when input="outFileFormat" value="eps" format="eps"/>
-                <when input="outFileFormat" value="plotly" format="html"/>
             </change_format>
         </data>
     </xml>
