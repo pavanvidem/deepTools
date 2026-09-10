@@ -28,6 +28,7 @@
             #else
                 --plotFileFormat 'png'
             #end if
+            --interpolationMethod '$interpolationMethod'
 
             #if $advancedOpt.showAdvancedOpt == "yes"
                 #if $advancedOpt.sortRegions:
@@ -132,7 +133,14 @@
             <expand macro="output_dpi" />
             <expand macro="input_save_matrix_values" />
         </expand>
-
+        <param argument="--interpolationMethod" type="select" label="Interpolation method for heatmap"
+            help="By default, plotHeatmap uses the method `nearest` if the number of columns is 1000 or less. See https://matplotlib.org/examples/images_contours_and_fields/interpolation_methods.html more info." >
+            <option value="auto" selected="true">auto</option>
+            <option value="nearest">nearest</option>
+            <option value="bilinear">bilinear</option>
+            <option value="bicubic">bicubic</option>
+            <option value="gaussian">gaussian</option>
+        </param>
         <conditional name="advancedOpt" >
             <param name="showAdvancedOpt" type="select" label="Show advanced options" >
                 <option value="no" selected="true">no</option>
@@ -262,6 +270,7 @@
     <tests>
         <test expect_num_outputs="1">
             <param name="matrixFile" value="computeMatrix_result1.gz" ftype="deeptools_compute_matrix_archive" />
+            <param name="interpolationMethod" value="gaussian" />
             <output name="outFileName" file="heatmapper_result1.png" ftype="png" compare="sim_size" delta="10000" />
         </test>
         <test expect_num_outputs="1">
