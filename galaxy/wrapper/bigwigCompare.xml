@@ -26,7 +26,7 @@
             #end if
 
             #if $advancedOpt.showAdvancedOpt == "yes":
-
+              $advancedOpt.no_collapse
               $advancedOpt.skipNAs
               $advancedOpt.skipZeroOverZero
               --scaleFactors '$advancedOpt.scaleFactor1:$advancedOpt.scaleFactor2'
@@ -91,7 +91,7 @@
                 <param argument="--binSize" type="integer" value="50" min="1"
                     label="Length, in bases, of the non-overlapping bins used for averaging the score over the regions length"
                     help="Size of the bins in bases for the output of the bigwig/bedgraph file."/>
-
+                <expand macro="no_collapse"/>
                 <expand macro="skipNAs"/>
                 <expand macro="skipZeroOverZero"/>
                 <expand macro="scaleFactors"/>
@@ -120,8 +120,9 @@
         <test expect_num_outputs="1">
             <param name="bigwigFile1" value="test.bw" ftype="bigwig"/>
             <param name="bigwigFile2" value="test.bw" ftype="bigwig"/>
-            <param name="showAdvancedOpt" value="no"/>
+            <param name="showAdvancedOpt" value="yes"/>
             <param name="outFileFormat" value="bedgraph"/>
+            <param name="no_collapse" value="false"/>
             <param name="binSize" value="10"/>
             <param name="comparison_select" value="ratio"/>
             <output name="outFileName" file="bigwigCompare_result2.bg" sort="true" ftype="bedgraph"/>

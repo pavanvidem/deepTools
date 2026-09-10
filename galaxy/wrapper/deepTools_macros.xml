@@ -925,4 +925,9 @@ is vital to you, select Yes below.">
 
     </xml>
 
+    <xml name="no_collapse">
+        <param argument="--no_collapse" type="boolean" truevalue="--no_collapse" falsevalue="" checked="true"
+            label="Adjacent bins that have the same value are collapsed"
+            help="This reduces the size of the output file (drastically)"/>
+    </xml>
 </macros>

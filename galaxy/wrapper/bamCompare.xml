@@ -57,6 +57,7 @@
                 #end if
 
                 @ADVANCED_OPTS_READ_PROCESSING@
+                $advancedOpt.no_collapse
                 $advancedOpt.skipNAs
                 $advancedOpt.skipZeroOverZero
 
@@ -143,7 +144,7 @@
             <when value="yes">
                 <expand macro="smoothLength"/>
                 <expand macro="read_processing_options"/>
-
+                <expand macro="no_collapse"/>
                 <expand macro="skipNAs"/>
                 <expand macro="skipZeroOverZero"/>
 
@@ -221,6 +222,7 @@
             <param name="showAdvancedOpt" value="yes"/>
             <param name="outFileFormat" value="bedgraph"/>
             <param name="binSize" value="10"/>
+            <param name="no_collapse" value="false"/>
             <param name="type" value="ratio"/>
             <param name="pseudocount" value="1 1"/>
             <output name="outFileName" ftype="bedgraph">
