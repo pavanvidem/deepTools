@@ -32,9 +32,6 @@
               --scaleFactors '$advancedOpt.scaleFactor1:$advancedOpt.scaleFactor2'
               --binSize $advancedOpt.binSize
 
-                #if $advancedOpt.plotTitle and str($advancedOpt.plotTitle.value) != "":
-                    --plotTitle '$advancedOpt.plotTitle'
-                #end if
                 @blacklist@
 
             #end if
@@ -98,7 +95,6 @@
                 <expand macro="skipNAs"/>
                 <expand macro="skipZeroOverZero"/>
                 <expand macro="scaleFactors"/>
-                <expand macro="plotTitle"/>
                 <expand macro="blacklist"/>
             </when>
         </conditional>
