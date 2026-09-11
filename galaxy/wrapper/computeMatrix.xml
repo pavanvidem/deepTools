@@ -216,32 +216,35 @@
     </outputs>
     <tests>
         <test expect_num_outputs="1">
-            <param name="regionsFile" value="computeMatrix1.bed" ftype="bed"/>
-            <param name="bigwigfiles" value="bamCoverage_result4.bw" ftype="bigwig"/>
-            <param name="showAdvancedOpt" value="yes"/>
-            <param name="mode_select" value="reference-point"/>
-            <param name="binSize" value="10"/>
-            <param name="sortUsing" value="sum"/>
-            <param name="averageTypeBins" value="sum"/>
-            <param name="beforeRegionStartLength" value="10"/>
-            <param name="afterRegionStartLength" value="10"/>
+            <param name="regionsFiles_0|regionsFile" value="computeMatrix1.bed" ftype="bed"/>
+            <param name="multibigwig_conditional|orderMatters" value="No" />
+            <param name="multibigwig_conditional|bigwigfiles" value="bamCoverage_result4.bw" ftype="bigwig"/>
+            <param name="advancedOpt|showAdvancedOpt" value="yes"/>
+            <param name="mode|mode_select" value="reference-point"/>
+            <param name="advancedOpt|binSize" value="10"/>
+            <param name="advancedOpt|sortUsing" value="sum"/>
+            <param name="advancedOpt|averageTypeBins" value="sum"/>
+            <param name="mode|beforeRegionStartLength" value="10"/>
+            <param name="mode|afterRegionStartLength" value="10"/>
             <output name="outFileName" file="computeMatrix_result1.gz" ftype="deeptools_compute_matrix_archive" compare="sim_size"/>
         </test>
         <test expect_num_outputs="1">
-            <param name="regionsFile" value="computeMatrix2.bed" ftype="bed"/>
-            <param name="bigwigfiles" value="computeMatrix2.bw" ftype="bigwig"/>
-            <param name="showAdvancedOpt" value="yes"/>
-            <param name="mode_select" value="reference-point"/>
-            <param name="binSize" value="10"/>
-            <param name="beforeRegionStartLength" value="10"/>
-            <param name="afterRegionStartLength" value="10"/>
+            <param name="regionsFiles_0|regionsFile" value="computeMatrix2.bed" ftype="bed"/>
+            <param name="multibigwig_conditional|orderMatters" value="No" />
+            <param name="multibigwig_conditional|bigwigfiles" value="computeMatrix2.bw" ftype="bigwig"/>
+            <param name="advancedOpt|showAdvancedOpt" value="yes"/>
+            <param name="mode|mode_select" value="reference-point"/>
+            <param name="advancedOpt|binSize" value="10"/>
+            <param name="mode|beforeRegionStartLength" value="10"/>
+            <param name="mode|afterRegionStartLength" value="10"/>
             <output name="outFileName" file="computeMatrix_result2.gz" ftype="deeptools_compute_matrix_archive" compare="sim_size"/>
         </test>
         <test expect_num_outputs="1">
-            <param name="regionsFile" value="computeMatrix2.bed" ftype="bed"/>
-            <param name="bigwigfiles" value="computeMatrix2.bw" ftype="bigwig"/>
-            <param name="showAdvancedOpt" value="yes"/>
-            <param name="mode_select" value="scale-regions"/>
+            <param name="regionsFiles_0|regionsFile" value="computeMatrix2.bed" ftype="bed"/>
+            <param name="multibigwig_conditional|orderMatters" value="No" />
+            <param name="multibigwig_conditional|bigwigfiles" value="computeMatrix2.bw" ftype="bigwig"/>
+            <param name="advancedOpt|showAdvancedOpt" value="yes"/>
+            <param name="mode|mode_select" value="scale-regions"/>
             <output name="outFileName" file="computeMatrix_result3.gz" ftype="deeptools_compute_matrix_archive" compare="sim_size"/>
         </test>
     </tests>

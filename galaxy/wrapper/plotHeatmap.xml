@@ -186,9 +186,9 @@
         </test>
         <test expect_num_outputs="1">
             <param name="matrixFile" value="computeMatrix_result1.gz" ftype="deeptools_compute_matrix_archive" />
-            <param name="showAdvancedOpt" value="yes" />
-            <param name="boxAroundHeatmaps" value="false" />
-            <param name="whatToShow" value="heatmap and colorbar" />
+            <param name="advancedOpt|showAdvancedOpt" value="yes" />
+            <param name="advancedOpt|boxAroundHeatmaps" value="false" />
+            <param name="advancedOpt|whatToShow" value="heatmap and colorbar" />
             <output name="outFileName" file="heatmapper_result2.png" ftype="png" compare="sim_size" delta="11000" />
         </test>
     </tests>

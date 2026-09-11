@@ -18,7 +18,7 @@
             --operation $comparison.comparison_select
 
             #if $comparison.comparison_select in ['ratio','log2']:
-                --pseudocount '$comparison.pseudocount'
+                --pseudocount $comparison.pseudocount
             #end if
 
             #if $region:
@@ -105,30 +105,29 @@
         <test expect_num_outputs="1">
             <param name="bigwigFile1" value="test.bw" ftype="bigwig"/>
             <param name="bigwigFile2" value="test.bw" ftype="bigwig"/>
-            <param name="showAdvancedOpt" value="no"/>
+            <param name="advancedOpt|showAdvancedOpt" value="no"/>
             <param name="outFileFormat" value="bigwig"/>
-            <param name="binSize" value="5"/>
-            <param name="comparison_select" value="ratio"/>
+            <param name="comparison|comparison_select" value="ratio"/>
             <output name="outFileName" file="bigwigCompare_result1.bw" ftype="bigwig" compare="sim_size"/>
         </test>
         <test expect_num_outputs="1">
             <param name="bigwigFile1" value="test.bw" ftype="bigwig"/>
             <param name="bigwigFile2" value="test.bw" ftype="bigwig"/>
-            <param name="showAdvancedOpt" value="yes"/>
+            <param name="advancedOpt|showAdvancedOpt" value="yes"/>
             <param name="outFileFormat" value="bedgraph"/>
-            <param name="no_collapse" value="false"/>
-            <param name="binSize" value="10"/>
-            <param name="comparison_select" value="ratio"/>
+            <param name="advancedOpt|no_collapse" value="false"/>
+            <param name="advancedOpt|binSize" value="10"/>
+            <param name="comparison|comparison_select" value="ratio"/>
             <output name="outFileName" file="bigwigCompare_result2.bg" sort="true" ftype="bedgraph"/>
         </test>
         <test expect_num_outputs="1">
             <param name="bigwigFile1" value="test.bw" ftype="bigwig"/>
             <param name="bigwigFile2" value="test.bw" ftype="bigwig"/>
-            <param name="showAdvancedOpt" value="yes"/>
+            <param name="advancedOpt|showAdvancedOpt" value="yes"/>
             <param name="outFileFormat" value="bedgraph"/>
-            <param name="fixedStep" value="true" />
-            <param name="binSize" value="10"/>
-            <param name="comparison_select" value="ratio"/>
+            <param name="advancedOpt|fixedStep" value="true" />
+            <param name="advancedOpt|binSize" value="10"/>
+            <param name="comparison|comparison_select" value="ratio"/>
             <output name="outFileName" file="bigwigCompare_result2.bg" sort="true" ftype="bedgraph"/>
         </test>
         

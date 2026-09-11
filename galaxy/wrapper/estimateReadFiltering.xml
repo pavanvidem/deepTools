@@ -70,7 +70,8 @@
     </outputs>
     <tests>
         <test>
-            <param name="bamfiles" value="paired_chr2L.bam,paired_chr2L.bam" ftype="bam" />
+            <param name="multibam_conditional|orderMatters" value="No" />
+            <param name="multibam_conditional|bamfiles" value="paired_chr2L.bam,paired_chr2L.bam" ftype="bam" />
             <param name="minMappingQuality" value="10" />
             <output name="outFileName" file="estimateReadFiltering.txt" ftype="tabular" />
         </test>

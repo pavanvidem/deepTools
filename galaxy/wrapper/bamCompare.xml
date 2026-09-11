@@ -44,7 +44,7 @@
             --operation $comparison.type
 
             #if $comparison.type in ['ratio','log2','reciprocal_ratio']:
-                --pseudocount '$comparison.pseudocount'
+                --pseudocount $comparison.pseudocount
             #end if
 
             #if $region:
@@ -163,19 +163,19 @@
         <test expect_num_outputs="1">
             <param name="bamFile1" value="bowtie2 test1.bam" ftype="bam"/>
             <param name="bamFile2" value="bowtie2 test1.bam" ftype="bam"/>
-            <param name="showAdvancedOpt" value="no"/>
+            <param name="advancedOpt|showAdvancedOpt" value="no"/>
             <param name="outFileFormat" value="bedgraph"/>
             <param name="binSize" value="5"/>
-            <param name="type" value="ratio"/>
+            <param name="comparison|type" value="ratio"/>
             <output name="outFileName" file="bamCompare_result1.bg" ftype="bedgraph"/>
         </test>
         <test expect_num_outputs="1">
             <param name="bamFile1" value="bowtie2 test1.bam" ftype="bam"/>
             <param name="bamFile2" value="bowtie2 test1.bam" ftype="bam"/>
-            <param name="showAdvancedOpt" value="yes"/>
+            <param name="advancedOpt|showAdvancedOpt" value="yes"/>
             <param name="outFileFormat" value="bigwig"/>
             <param name="binSize" value="10"/>
-            <param name="type" value="ratio"/>
+            <param name="comparison|type" value="ratio"/>
             <output name="outFileName" file="bamCompare_result2.bw" ftype="bigwig"/>
         </test>
         <!-- Test with BAM and CRAM file as input
@@ -212,12 +212,12 @@
         <test expect_num_outputs="1">
             <param name="bamFile1" value="testA.bam" ftype="bam"/>
             <param name="bamFile2" value="testB.bam" ftype="bam"/>
-            <param name="showAdvancedOpt" value="yes"/>
+            <param name="advancedOpt|showAdvancedOpt" value="yes"/>
             <param name="outFileFormat" value="bedgraph"/>
             <param name="binSize" value="10"/>
-            <param name="no_collapse" value="false"/>
-            <param name="type" value="ratio"/>
-            <param name="pseudocount" value="1 1"/>
+            <param name="advancedOpt|no_collapse" value="false"/>
+            <param name="comparison|type" value="ratio"/>
+            <param name="comparison|pseudocount" value="1 1"/>
             <output name="outFileName" ftype="bedgraph">
                 <assert_contents>
                     <has_text_matching expression="3R\t0\t50\t1"/>
@@ -231,11 +231,11 @@
         <test expect_num_outputs="1">
             <param name="bamFile1" value="testA.bam" ftype="bam"/>
             <param name="bamFile2" value="testB.bam" ftype="bam"/>
-            <param name="showAdvancedOpt" value="yes"/>
+            <param name="advancedOpt|showAdvancedOpt" value="yes"/>
             <param name="outFileFormat" value="bedgraph"/>
             <param name="binSize" value="10"/>
-            <param name="type" value="ratio"/>
-            <param name="skipZeroOverZero" value="--skipZeroOverZero"/>
+            <param name="comparison|type" value="ratio"/>
+            <param name="advancedOpt|skipZeroOverZero" value="--skipZeroOverZero"/>
             <output name="outFileName" ftype="bedgraph">
                 <assert_contents>
                     <has_text_matching expression="3R\t50\t100\t0.67"/>
@@ -248,11 +248,11 @@
         <test expect_num_outputs="1">
             <param name="bamFile1" value="testA.bam" ftype="bam"/>
             <param name="bamFile2" value="testB.bam" ftype="bam"/>
-            <param name="showAdvancedOpt" value="yes"/>
+            <param name="advancedOpt|showAdvancedOpt" value="yes"/>
             <param name="outFileFormat" value="bedgraph"/>
             <param name="binSize" value="10"/>
-            <param name="type" value="ratio"/>
-            <param name="skipNAs" value="true"/>
+            <param name="comparison|type" value="ratio"/>
+            <param name="advancedOpt|skipNAs" value="true"/>
             <output name="outFileName" ftype="bedgraph">
                 <assert_contents>
                     <has_text_matching expression="3R\t100\t150\t1.33"/>

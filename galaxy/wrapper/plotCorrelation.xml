@@ -121,9 +121,9 @@
         <test expect_num_outputs="1">
             <param name="corData" value="multiBamSummary_result1.npz" ftype="deeptools_coverage_matrix" />
             <param name="outFileFormat" value="png" />
-            <param name="whatToPlot" value="scatterplot" />
+            <param name="plotting_type|whatToPlot" value="scatterplot" />
             <param name="removeOutliers" value="True" />
-            <param name="plotTitle" value="Test Plot" />
+            <param name="plotting_type|plotTitle" value="Test Plot" />
             <output name="outFileName" file="plotCorrelation_result2.png" ftype="png" compare="sim_size" delta="2000" />
         </test>
     </tests>
