@@ -14,7 +14,7 @@
             --outFileName "$outFileName"
 
             #if $output.showOutputSettings == "yes"
-                --plotFileFormat $output.outFileFormat
+                --plotFileFormat '$output.outFileFormat'
 
                 #if $output.dpi:
                     --dpi '$output.dpi'
@@ -32,7 +32,7 @@
                     --averageType '$advancedOpt.averageType'
                 #end if
                 @PLOTWIDTHHEIGHT@
-                --plotType $advancedOpt.plotType
+                --plotType '$advancedOpt.plotType'
 
                 #if str($advancedOpt.colors).strip() != "":
                     --colors #echo ' '.join( ["'%s'" % $color for $color in $advancedOpt.colors.split()] )#

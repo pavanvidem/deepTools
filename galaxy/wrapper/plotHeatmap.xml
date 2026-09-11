@@ -61,19 +61,19 @@
                     --colorMap #echo " ".join($colorMap)#
                 #end if
 
-                --alpha '$advancedOpt.alpha'
-                #if str($advancedOpt.colorList).strip() != "":
-                    --colorList $advancedOpt.colorList
+                --alpha $advancedOpt.alpha
+                #if $advancedOpt.colorList:
+                    --colorList '$advancedOpt.colorList'
                 #end if
 
-                #if str($advancedOpt.zMin).strip() != "":
+                #if $advancedOpt.zMin:
                     --zMin $advancedOpt.zMin
                 #end if
-                #if str($advancedOpt.zMax).strip() != "":
+                #if $advancedOpt.zMax:
                     --zMax $advancedOpt.zMax
                 #end if
 
-                #if str($advancedOpt.sortUsingSamples).strip() != "":
+                #if $advancedOpt.sortUsingSamples:
                     --sortUsingSamples '$advancedOpt.sortUsingSamples'
                 #end if
 
@@ -83,7 +83,7 @@
                 --heatmapWidth $advancedOpt.heatmapWidth
                 --heatmapHeight $advancedOpt.heatmapHeight
 
-                --boxAroundHeatmaps $advancedOpt.boxAroundHeatmaps
+                $advancedOpt.boxAroundHeatmaps
                 --whatToShow '$advancedOpt.whatToShow'
 
                 @HEATMAP_PROFILER_PARAMS@
@@ -139,12 +139,12 @@
                 <expand macro="colorMap" />
             </repeat>
             <param argument="--alpha" type="float" value="1.0" min="0.0"
-                max="1.0" optional="True"
+                max="1.0" optional="true"
                 label="Alpha channel (transparency)"
                 help="The alpha channel (transparency) to use for the heatmaps. The default is 1.0 and values must
                 be between 0 and 1. A value of 0.0 would be fully transparent." />
 
-            <param argument="--colorList" type="text" value="" optional="True"
+            <param argument="--colorList" type="text" value="" optional="true"
                 label="List of colors for each heatmap. Separate lists by spaces and the colors in the list by comas"
                 help="The color of the heatmaps can be specified as a list of colors separated by comas with
                 not space in between. For example: white,blue white,green will set a color map from white

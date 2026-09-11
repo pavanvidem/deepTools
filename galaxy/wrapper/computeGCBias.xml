@@ -17,7 +17,7 @@
         @BINARY@
             @THREADS@
             --bamfile local_bamInput.bam
-            --GCbiasFrequenciesFile $outFileName
+            --GCbiasFrequenciesFile '$outFileName'
 
             #if $fragmentLength != "":
                 --fragmentLength $fragmentLength
@@ -31,23 +31,23 @@
                 --effectiveGenomeSize $effectiveGenomeSize.effectiveGenomeSize_opt
             #end if
 
-            #if str($region).strip() != '':
+            #if $region:
                 --region '$region'
             #end if
 
             #if $advancedOpt.showAdvancedOpt == "yes":
-                --sampleSize '$advancedOpt.sampleSize'
-                --regionSize '$advancedOpt.regionSize'
+                --sampleSize $advancedOpt.sampleSize
+                --regionSize $advancedOpt.regionSize
 
                 #if $advancedOpt.extraSampling:
-                    --extraSampling $advancedOpt.extraSampling
+                    --extraSampling '$advancedOpt.extraSampling'
                 #end if
 
                 @blacklist@
             #end if
 
-            #if str($image_format) != 'none':
-                --biasPlot $outImageName
+            #if $image_format != 'none':
+                --biasPlot '$outImageName'
                 --plotFileFormat $image_format
             #end if
 ]]>

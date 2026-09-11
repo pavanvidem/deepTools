@@ -12,10 +12,10 @@
             @THREADS@
             --bamfiles #echo " ".join($files)
             --labels #echo " ".join($labels)
-            --plotFile $outFileName
+            --plotFile '$outFileName'
 
             #if $output.showOutputSettings == "yes"
-                --plotFileFormat $output.outFileFormat
+                --plotFileFormat '$output.outFileFormat'
                 #if $output.saveRawCounts:
                     --outRawCounts '$outFileRawCounts'
                 #end if
@@ -32,17 +32,17 @@
                 --plotFileFormat 'png'
             #end if
 
-            #if str($region).strip() != '':
+            #if $region:
                 --region '$region'
             #end if
 
             #if $advancedOpt.showAdvancedOpt == "yes":
-                --binSize '$advancedOpt.binSize'
-                --numberOfSamples '$advancedOpt.numberOfSamples'
+                --binSize $advancedOpt.binSize
+                --numberOfSamples $advancedOpt.numberOfSamples
 
                 $advancedOpt.skipZeros
 
-                #if $advancedOpt.plotTitle and str($advancedOpt.plotTitle.value) != "":
+                #if $advancedOpt.plotTitle:
                     --plotTitle '$advancedOpt.plotTitle'
                 #end if
                 $advancedOpt.ggplot

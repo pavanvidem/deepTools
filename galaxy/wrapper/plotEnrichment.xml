@@ -24,7 +24,7 @@
 
             --plotFileFormat '$outFileFormat'
 
-            #if str($region).strip() != "":
+            #if $region:
                 --region '$region'
             #end if
 
@@ -33,15 +33,15 @@
                     --attributeKey '$advancedOpt.attributeKey'
                 #end if
 
-                #if $advancedOpt.labels and str($advancedOpt.labels).strip() != "":
-                    --labels $advancedOpt.labels
+                #if $advancedOpt.labels:
+                    --labels '$advancedOpt.labels'
                 #end if
 
-                #if $advancedOpt.regionLabels and str($advancedOpt.regionLabels).strip() != "":
-                    --regionLabels $advancedOpt.regionLabels
+                #if $advancedOpt.regionLabels:
+                    --regionLabels '$advancedOpt.regionLabels'
                 #end if
 
-                #if $advancedOpt.plotTitle and str($advancedOpt.plotTitle.value) != "":
+                #if $advancedOpt.plotTitle:
                     --plotTitle '$advancedOpt.plotTitle'
                 #end if
 
@@ -51,20 +51,20 @@
 
                 @PLOTWIDTHHEIGHT@
 
-                #if str($advancedOpt.colors).strip() != "":
+                #if $advancedOpt.colors:
                     --colors #echo ' '.join( ["'%s'" % $color for $color in $advancedOpt.colors.split()] )#
                 #end if
 
-                --numPlotsPerRow '$advancedOpt.numPlotsPerRow'
+                --numPlotsPerRow $advancedOpt.numPlotsPerRow
 
-                --alpha '$advancedOpt.alpha'
+                --alpha $advancedOpt.alpha
 
                 $advancedOpt.ggplot
 
                 @ADVANCED_OPTS_READ_PROCESSING@
 
                 #if $advancedOpt.Offset:
-                    --Offset $advancedOpt.Offset
+                    --Offset '$advancedOpt.Offset'
                 #end if
 
                 @blacklist@
@@ -139,7 +139,7 @@
                 label="Include BED12 exons"
                 help="Only for BED12 files, include columns 10-12 rather than just 2 and 3." />
 
-            <param argument="--Offset" type="text"  value="" optional="True"
+            <param argument="--Offset" type="text"  value="" optional="true"
                 label="Offset inside each alignment to use for the signal location."
                 help="Uses this offset inside of each read as the signal. This is useful in
                     cases like RiboSeq or GROseq, where only the 12th, 15th or 1st base aligned

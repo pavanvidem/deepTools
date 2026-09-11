@@ -116,7 +116,7 @@
                 label="Determine nucleosome positions from MNase-seq data"
                 help="Only the 3 nucleotides at the center of each fragment are counted. The fragment ends are defined by the two mate reads. *NOTE*: Requires paired-end data. By default, only fragments between 130 and 200 bases will be used, though this can be changed with the --minFragmentLength and --maxFragmentLength options."/>
 
-            <param argument="--Offset" type="text"  value="" optional="True"
+            <param argument="--Offset" type="text"  value="" optional="true"
                 label="Offset inside each alignment to use for the signal location."
                 help="Uses this offset inside of each read as the signal. This is useful in
                     cases like RiboSeq or GROseq, where only the 12th, 15th or 1st base aligned

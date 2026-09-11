@@ -27,7 +27,7 @@
                 --effectiveGenomeSize $effectiveGenomeSize.effectiveGenomeSize_opt
             #end if
 
-            #if str($region).strip() != '':
+            #if $region:
                 --region '$region'
             #end if
             --binSize $binSize
@@ -40,7 +40,6 @@
             label="BAM/CRAM file" help="This should be same file that was used for computeGCbias."/>
         <expand macro="reference_genome_source"/>
         <expand macro="effectiveGenomeSize"/>
-        <expand macro="region_limit_operation"/>
         <expand macro="region_limit_operation"/>
         <param argument="--binSize" type="integer" value="50" min="1"
             label="Bin size in bases"

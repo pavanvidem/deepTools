@@ -16,15 +16,15 @@
         --bamfiles #echo " ".join($files)#
         --sampleLabels #echo " ".join($labels)#
 
-        -bs '$binSize'
-        --distanceBetweenBins '$distanceBetweenBins'
+        -bs $binSize
+        --distanceBetweenBins $distanceBetweenBins
 
         #if str($filterRNAstrand) != 'no':
             --filterRNAstrand '$filterRNAstrand'
         #end if
         $ignoreDuplicates
         #if $minMappingQuality:
-            --minMappingQuality '$minMappingQuality'
+            --minMappingQuality $minMappingQuality
         #end if
         #if $samFlagInclude:
             --samFlagInclude $samFlagInclude

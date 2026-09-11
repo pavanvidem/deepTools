@@ -43,17 +43,17 @@
 
             --operation $comparison.type
 
-            #if $comparison.type in ['ratio','log2']:
-                --pseudocount $comparison.pseudocount
+            #if $comparison.type in ['ratio','log2','reciprocal_ratio']:
+                --pseudocount '$comparison.pseudocount'
             #end if
 
-            #if str($region).strip() != '':
+            #if $region:
                 --region '$region'
             #end if
 
             #if $advancedOpt.showAdvancedOpt == "yes":
                 #if $advancedOpt.smoothLength:
-                    --smoothLength '$advancedOpt.smoothLength'
+                    --smoothLength $advancedOpt.smoothLength
                 #end if
 
                 @ADVANCED_OPTS_READ_PROCESSING@
@@ -61,7 +61,7 @@
                 $advancedOpt.skipNAs
                 $advancedOpt.skipZeroOverZero
 
-                #if str($advancedOpt.ignoreForNormalization).strip() != '':
+                #if $advancedOpt.ignoreForNormalization:
                     --ignoreForNormalization '$advancedOpt.ignoreForNormalization'
                 #end if
 
@@ -142,7 +142,7 @@
             <expand macro="skipNAs"/>
             <expand macro="skipZeroOverZero"/>
 
-            <param argument="--ignoreForNormalization" type="text" value="" size="50"
+            <param argument="--ignoreForNormalization" type="text" value="" size="50" optional="true"
                 label="regions that should be excluded for calculating the scaling factor"
                 help="Sometimes it makes sense to exclude certain regions when calculating the scaling factor.
                     For example, if you know of copy number variations between samples then you may want to exclude these.

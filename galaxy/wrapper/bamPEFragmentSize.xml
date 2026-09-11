@@ -22,17 +22,17 @@
             #end if
             --plotTitle '$plotTitle'
             #if $advancedOpt.showAdvancedOpt == 'yes'
-                --binSize '$advancedOpt.binSize'
-                --distanceBetweenBins '$advancedOpt.distanceBetweenBins'
+                --binSize $advancedOpt.binSize
+                --distanceBetweenBins $advancedOpt.distanceBetweenBins
                 $advancedOpt.logScale
-                --maxFragmentLength '$advancedOpt.maxFragmentLength'
-                @blacklist@
+                --maxFragmentLength $advancedOpt.maxFragmentLength
                 #if $advancedOpt.table
                     --table '$table'
                 #end if
                 #if $advancedOpt.outRawFragmentLengths
                     --outRawFragmentLengths '$fragLengths'
                 #end if
+                @blacklist@
                 $advancedOpt.ggplot
             #end if
             > '$outfile'
@@ -55,7 +55,7 @@
         </param>
         <expand macro="plotTitle"/>
         <expand macro="advancedOpt_scaffold">
-            <param argument="--binSize" type="integer" value="1000" min="1" optional="true"
+            <param argument="--binSize" type="integer" value="1000" min="1"
                 label="bin size, in bases" help="Length in bases of the window used to sample the genome. (--binSize)"/>
             <expand macro="distanceBetweenBins" DISTANCE="1000000"/>
             <param argument="--table" type="boolean" truevalue="--table" falsevalue=""

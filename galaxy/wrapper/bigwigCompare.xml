@@ -18,10 +18,10 @@
             --operation $comparison.comparison_select
 
             #if $comparison.comparison_select in ['ratio','log2']:
-                --pseudocount $comparison.pseudocount
+                --pseudocount '$comparison.pseudocount'
             #end if
 
-            #if str($region).strip() != '':
+            #if $region:
                 --region '$region'
             #end if
 
@@ -32,9 +32,7 @@
               $advancedOpt.skipZeroOverZero
               --scaleFactors '$advancedOpt.scaleFactor1:$advancedOpt.scaleFactor2'
               --binSize $advancedOpt.binSize
-
-                @blacklist@
-
+              @blacklist@
             #end if
 ]]>
     </command>

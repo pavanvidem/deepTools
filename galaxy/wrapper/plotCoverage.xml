@@ -13,7 +13,6 @@
         @multiple_input_bams@
 
         @BINARY@
-
             @THREADS@
 
             --plotFile '$outFileName'
@@ -43,15 +42,14 @@
             #end if
 
             #if $advancedOpt.showAdvancedOpt == "yes":
-                --numberOfSamples '$advancedOpt.numberOfSamples'
+                --numberOfSamples $advancedOpt.numberOfSamples
                 $advancedOpt.skipZeros
 
-                #if str($advancedOpt.region).strip() != '':
+                #if $advancedOpt.region:
                     --region '$advancedOpt.region'
                 #end if
-                --numberOfSamples $advancedOpt.numberOfSamples
 
-                #if $advancedOpt.plotTitle and str($advancedOpt.plotTitle.value) != "":
+                #if $advancedOpt.plotTitle:
                     --plotTitle '$advancedOpt.plotTitle'
                 #end if
                 $advancedOpt.ggplot
@@ -59,11 +57,9 @@
                 @PLOTWIDTHHEIGHT@
                 @blacklist@
             #end if
-
 ]]>
     </command>
     <inputs>
-
         <expand macro="multiple_input_bams" MIN="1"/>
         <expand macro="custom_sample_labels" />
         <param argument="--BED" type="data" format="bed,gtf" multiple="true" optional="true" min="0"

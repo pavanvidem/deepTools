@@ -16,15 +16,15 @@
             #if str($advancedOpt.showAdvancedOpt) == 'yes':
                 @PLOTWIDTHHEIGHT@
                 $advancedOpt.log2
-                --PCs $advancedOpt.PCs
+                --PCs '$advancedOpt.PCs'
                 --ntop $advancedOpt.ntop
                 $advancedOpt.transpose
                 $advancedOpt.rowCenter
                 #if $advancedOpt.colors:
-                    --colors $advancedOpt.colors
+                    --colors '$advancedOpt.colors'
                 #end if
                 #if $advancedOpt.markers:
-                    --markers $advancedOpt.markers
+                    --markers '$advancedOpt.markers'
                 #end if
                 $advancedOpt.addLabels
                 $advancedOpt.ggplot
@@ -49,9 +49,9 @@
             <param argument="--log2" type="boolean" truevalue="--log2" falsevalue="" label="log2 transform data" help="log2 transform the datapoints prior to computing the PCA. Note that 0.01 is added to all values to prevent 0 values from becoming -infinity. Using this option with input that contains negative values will result in an error." />
             <param argument="--transpose" type="boolean" label="Transpose Matrix?" help="Perform the PCA on the transpose of the matrix, (i.e., with samples as rows and features/genes as columns). This then matches what is typically done in R for RNAseq data." truevalue="--transpose" falsevalue="" />
             <param argument="--rowCenter" type="boolean" label="Center Rows?" help="When specified, each row (bin, gene, etc.) in the matrix is centered at 0 before the PCA is computed. This is useful only if you have a strong bin/gene/etc. correlation and the resulting principal component has samples stacked vertically. This option is not applicable if the PCA is performed on the transposed matrix." truevalue="--rowCenter" falsevalue="" />
-            <param argument="--colors" type="text" label="Symbol colors" value="" optional="True"
+            <param argument="--colors" type="text" label="Symbol colors" value="" optional="true"
                 help="A list of colors for the symbols. Color names and html hex string (e.g., #eeff22) are accepted. The color names should be space separated. For example, --colors 'red blue green'. If not specified, the symbols will be given automatic colors." />
-            <param argument="--markers" type="text" label="Custom markers" value="" optional="True"
+            <param argument="--markers" type="text" label="Custom markers" value="" optional="true"
                 help="A list of markers for the symbols. (e.g., '&lt;','&gt;','o') are accepted. The marker values should be space separated. For example, 's' 'o' 's' 'o'. If not specified, the symbols will be given automatic shapes." />
             <param argument="--addLabels" type="boolean" label="Add Labels to the plot" 
                 help="If specified, the labels will be added next to points also legend is omitted." 

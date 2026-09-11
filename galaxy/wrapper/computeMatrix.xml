@@ -53,7 +53,6 @@
                     --unscaled3prime $mode.regionStartLength.unscaled3prime
 
                 #end if
-
             #end if
 
             #if $advancedOpt.showAdvancedOpt == "yes":
@@ -67,13 +66,13 @@
                 $advancedOpt.missingDataAsZero
                 --binSize $advancedOpt.binSize
 
-                #if $advancedOpt.minThreshold is not None and str($advancedOpt.minThreshold) != '':
+                #if $advancedOpt.minThreshold:
                     --minThreshold $advancedOpt.minThreshold
                 #end if
-                #if $advancedOpt.maxThreshold is not None and str($advancedOpt.maxThreshold) != '':
+                #if $advancedOpt.maxThreshold:
                     --maxThreshold $advancedOpt.maxThreshold
                 #end if
-                #if $advancedOpt.scale is not None and str($advancedOpt.scale) != '':
+                #if $advancedOpt.scale:
                     --scale $advancedOpt.scale
                 #end if
 
@@ -190,19 +189,19 @@
 
             <expand macro="skipZeros"/>
 
-            <param name="minThreshold" type="float" optional="True"
+            <param name="minThreshold" type="float" optional="true"
                 label="Minimum threshold"
                 help="Any region containing a value that is equal or less than this numeric
                 value will be skipped. This is useful to skip, for example, genes where the
                 read count is zero for any of the bins which could be the result of
                 unmappable areas and can bias the overall results. (--minThreshold)"/>
-            <param name="maxThreshold" type="float" optional="True"
+            <param name="maxThreshold" type="float" optional="true"
                 label="Maximum threshold"
                 help="Any region containing a value that is equal or higher that this
                 numeric value will be skipped. The max threshold is useful to skip those
                 few regions with very high read counts (e.g. major satellites) that may
                 bias the average values. (--maxThreshold)"/>
-            <param name="scale" type="float" optional="True" label="Scaling factor"
+            <param name="scale" type="float" optional="true" label="Scaling factor"
                 help="If set, all values are multiplied by this number. (--scale)"/>
 
             <expand macro="gtf_options"/>
