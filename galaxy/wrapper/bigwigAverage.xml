@@ -16,7 +16,7 @@
             --outFileName '$outFileName'
             --outFileFormat '$outFileFormat'
 
-            #if str($region).strip() != '':
+            #if $region:
                 --region '$region'
             #end if
 

@@ -11,11 +11,7 @@
         @BINARY@
             @THREADS@
             --bamfiles #echo " ".join($files)
-            #if $samplesLabel:
-                --samplesLabel #echo " ".join($samplesLabel)
-            #else:
-                --samplesLabel #echo " ".join($labels)
-            #end if
+            --samplesLabel #echo ' '.join($labels)#           
             #if $histogram:
                 --histogram '$histogram_outfile'
                 --plotFileFormat '$outFileFormat'
@@ -40,18 +36,10 @@
     </command>
     <inputs>
         <expand macro="multiple_input_bams" MIN="1"/>
+        <expand macro="custom_sample_labels"/>
         <param argument="--histogram" type="boolean" truevalue="--histogram" falsevalue=""
             label="Get the distribution of read/fragment lengths as a histogram"/>
         <expand macro="input_image_file_format"/>
-        <param argument="--samplesLabel" type="text" size="30"
-            label="Labels for the samples (each BAM file) plotted"
-            help="The default is to use the file name of the sample. The sample labels should be separated by
-            spaces and quoted if a label itself contains a space E.g. label-1 &quot;label 2&quot;">
-            <sanitizer>
-               <valid initial="string.printable">
-               </valid>
-            </sanitizer>
-        </param>
         <expand macro="plotTitle"/>
         <expand macro="advancedOpt_scaffold">
             <param argument="--binSize" type="integer" value="1000" min="1"
