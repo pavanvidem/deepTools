@@ -113,7 +113,7 @@
             <param name="multibam_conditional|bamfiles" value="bowtie2 test1.bam,bowtie2 test1.bam" ftype="bam" />
             <param name="advancedOpt|showAdvancedOpt" value="no" />
             <param name="output|showOutputSettings" value="no" />
-            <output name="outFileName" file="plotFingerprint_result1.png" ftype="png" compare="sim_size" />
+            <output name="outFileName" file="plotFingerprint_result1.png" ftype="png" compare="image_diff" eps="0.1" />
         </test>
         <test expect_num_outputs="3">
             <param name="multibam_conditional|orderMatters" value="No" />
@@ -124,7 +124,7 @@
             <param name="output|saveQualityMetrics" value="true" />
             <param name="advancedOpt|plotTitle" value="Test Fingerprint Plot" />
             <param name="output|JSDsample" value="bowtie2 test1.bam" ftype="bam" />
-            <output name="outFileName" file="plotFingerprint_result2.png" ftype="png" compare="sim_size" />
+            <output name="outFileName" file="plotFingerprint_result2.png" ftype="png" compare="image_diff" eps="0.1" />
             <output name="outFileRawCounts" file="plotFingerprint_result2.tabular" ftype="tabular" />
             <output name="outFileQualityMetrics" file="plotFingerprint_quality_metrics.tabular" ftype="tabular" />
         </test>

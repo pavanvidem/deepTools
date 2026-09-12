@@ -73,14 +73,14 @@
             <param name="plotTitle" value="Test Plot" />
             <param name="outFileFormat" value="png" />
             <param name="advancedOpt|showAdvancedOpt" value="yes" />
-            <output name="outFileName" file="plotPCA_result1.png" ftype="png" compare="sim_size" delta="12000" />
+            <output name="outFileName" file="plotPCA_result1.png" ftype="png" compare="image_diff" eps="0.1" />
         </test>
         <test expect_num_outputs="2">
             <param name="corData" value="multiBamSummary_result2b.npz" ftype="deeptools_coverage_matrix" />
             <param name="plotTitle" value="Test Plot" />
             <param name="outFileFormat" value="png" />
             <param name="outFileNameData" value="True" />
-            <output name="outFileName" file="plotPCA_result2.png" ftype="png" compare="sim_size" delta="12000" />
+            <output name="outFileName" file="plotPCA_result2.png" ftype="png" compare="image_diff" eps="0.1" />
             <output name="output_outFileNameData" ftype="tabular">
                 <!-- The duplicate-sample column is mathematically zero, so it comes
                      out as tiny BLAS-dependent noise (~1e-18) that varies across

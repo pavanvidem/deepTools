@@ -170,7 +170,7 @@
             <param name="advancedOpt|showAdvancedOpt" value="yes" />
             <param name="advancedOpt|minMappingQuality" value="0" />
             <param name="advancedOpt|regionLabels" value="up down" />
-            <output name="outFileName" file="plotEnrichment_output.png" ftype="png" compare="sim_size" delta="5500" />
+            <output name="outFileName" file="plotEnrichment_output.png" ftype="png" compare="image_diff" eps="0.1" />
             <output name="outFileRawCounts" file="plotEnrichment_output.txt" ftype="tabular" />
         </test>
     </tests>

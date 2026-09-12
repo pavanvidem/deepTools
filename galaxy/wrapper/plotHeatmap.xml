@@ -181,19 +181,19 @@
     <tests>
         <test expect_num_outputs="1">
             <param name="matrixFile" value="computeMatrix_result1.gz" ftype="deeptools_compute_matrix_archive" />
-            <output name="outFileName" file="heatmapper_result1.png" ftype="png" compare="sim_size" delta="10000" />
+            <output name="outFileName" file="heatmapper_result1.png" ftype="png" compare="image_diff" eps="0.1" />
         </test>
         <test expect_num_outputs="1">
             <param name="matrixFile" value="computeMatrix_result1.gz" ftype="deeptools_compute_matrix_archive" />
             <param name="advancedOpt|showAdvancedOpt" value="yes" />
             <param name="advancedOpt|boxAroundHeatmaps" value="false" />
             <param name="advancedOpt|whatToShow" value="heatmap and colorbar" />
-            <output name="outFileName" file="heatmapper_result2.png" ftype="png" compare="sim_size" delta="11000" />
+            <output name="outFileName" file="heatmapper_result2.png" ftype="png" compare="image_diff" eps="0.1" />
         </test>
         <test expect_num_outputs="1">
             <param name="matrixFile" value="computeMatrix_result1.gz" ftype="deeptools_compute_matrix_archive" />
             <param name="interpolationMethod" value="gaussian" />
-            <output name="outFileName" file="heatmapper_result3.png" ftype="png" compare="sim_size" delta="10000" />
+            <output name="outFileName" file="heatmapper_result3.png" ftype="png" compare="image_diff" eps="0.1" />
         </test>
     </tests>
     <help>

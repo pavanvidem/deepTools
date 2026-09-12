@@ -86,7 +86,7 @@
             <param name="histogram" value="True"/>
             <param name="plotTitle" value="Test Plot"/>
             <output name="outfile" file="bamPEFragmentSize_result1.txt" ftype="txt"/>
-            <output name="histogram_outfile" file="bamPEFragmentSize_histogram_result1.png" ftype="png" compare="sim_size"/>
+            <output name="histogram_outfile" file="bamPEFragmentSize_histogram_result1.png" ftype="png" compare="image_diff" eps="0.1"/>
         </test>
         <test expect_num_outputs="3">
             <param name="multibam_conditional|orderMatters" value="No" />
