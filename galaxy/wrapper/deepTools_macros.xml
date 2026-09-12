@@ -553,7 +553,12 @@ is vital to you, select Yes below.">
         #end for
         #if len($files) > 0:
             --BED #echo ' '.join($files)#
-            --regionLabels #echo ' '.join($labels)#
+            --regionLabels
+            #if $advancedOpt.regionLabels:
+                $advancedOpt.regionLabels
+            #else:
+                #echo ' '.join($labels)#
+            #end if
         #end if
 ]]>
     </token>

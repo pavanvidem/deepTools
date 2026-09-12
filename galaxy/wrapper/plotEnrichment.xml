@@ -37,10 +37,6 @@
                     --labels '$advancedOpt.labels'
                 #end if
 
-                #if $advancedOpt.regionLabels:
-                    --regionLabels '$advancedOpt.regionLabels'
-                #end if
-
                 #if $advancedOpt.plotTitle:
                     --plotTitle '$advancedOpt.plotTitle'
                 #end if
