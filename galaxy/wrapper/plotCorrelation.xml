@@ -13,7 +13,6 @@
             --corMethod '$corMethod'
             #if $custom_sample_labels_conditional.custom_labels_select == 'Yes':
                 --labels $custom_sample_labels_conditional.labels ## do not add quotes as the input might contain quotes
-                #end for
             #end if
             --whatToPlot '$plotting_type.whatToPlot'
             #if str($plotting_type.whatToPlot) == 'heatmap':
