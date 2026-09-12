@@ -10,13 +10,18 @@
         @BINARY@
             --corData '$corData'
             --plotTitle '$plotTitle'
-            --labels #echo " ".join($labels)
+            #if $custom_sample_labels_conditional.custom_labels_select == 'Yes':
+                --labels
+                #for $label in $custom_sample_labels_conditional.labels
+                    '$label'
+                #end for
+            #end if
             --plotFile '$outFileName'
             --plotFileFormat '$outFileFormat'
             #if str($advancedOpt.showAdvancedOpt) == 'yes':
                 @PLOTWIDTHHEIGHT@
                 $advancedOpt.log2
-                --PCs '$advancedOpt.PCs'
+                --PCs $advancedOpt.PCs
                 --ntop $advancedOpt.ntop
                 $advancedOpt.transpose
                 $advancedOpt.rowCenter
@@ -29,7 +34,7 @@
                 $advancedOpt.addLabels
                 $advancedOpt.ggplot
             #end if
-            #if $outFileNameData
+            #if $outFileNameData:
                 --outFileNameData '$output_outFileNameData'
             #end if
 ]]>
@@ -88,7 +93,7 @@
                 <assert_contents>
                     <has_n_columns n="4" />
                     <has_line_matching expression="Component\tbowtie2-test1.bam\tbowtie2-test1.bam\tEigenvalue" />
-                    <has_line_matching expression="1\t-?1\.99949\d*\t.*\t2\.9999\d*" />
+                    <has_line_matching expression="1\t-?1\.99949\d*\t.*\t3\.0000\d*" />
                     <has_line_matching expression="2\t-?0\.96079\d*\t.*" />
                 </assert_contents>
             </output>

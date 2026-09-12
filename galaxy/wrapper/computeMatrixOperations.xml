@@ -78,7 +78,7 @@
         #end if
 
         #if $submodule.command == "info" or $submodule.command == "dataRange":
-            > '$outFileName'
+            > '$outFileTxt'
         #else:
             -o '$outFileName'
         #end if
@@ -202,8 +202,8 @@
             <param name="submodule|matrixFile" value="computeMatrix_result1.gz" ftype="deeptools_compute_matrix_archive"/>
             <output name="outFileTxt">
                 <assert_contents>
-                    <has_text text="Samples	Min	Max	Median	10th	90th"/>
-                    <has_text text="bamCoverage_result4_bw_0	1122690.0	5292690.0	1884522.5	1419407.0	4410575.0"/>
+                    <has_line_matching expression="Samples\tMin\tMax\tMedian\t10th\t90th"/>
+                    <has_line_matching expression="bamCoverage_result4_bw_0\t1122690.0\t5292690.0\t1884522.5\t1419407.0\t4410575.0"/>
                 </assert_contents>
             </output>
         </test>

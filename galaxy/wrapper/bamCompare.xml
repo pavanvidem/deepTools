@@ -176,6 +176,7 @@
             <param name="outFileFormat" value="bigwig"/>
             <param name="binSize" value="10"/>
             <param name="comparison|type" value="ratio"/>
+            <param name="advancedOpt|no_collapse" value="false"/>
             <output name="outFileName" file="bamCompare_result2.bw" ftype="bigwig"/>
         </test>
         <!-- Test with BAM and CRAM file as input
@@ -238,9 +239,9 @@
             <param name="advancedOpt|skipZeroOverZero" value="--skipZeroOverZero"/>
             <output name="outFileName" ftype="bedgraph">
                 <assert_contents>
-                    <has_text_matching expression="3R\t50\t100\t0.67"/>
-                    <has_text_matching expression="3R\t100\t150\t1.33"/>
-                    <has_text_matching expression="3R\t150\t200\t1"/>
+                    <has_text_matching expression="3R\t90\t100\t0.67"/>
+                    <has_text_matching expression="3R\t140\t150\t1.33"/>
+                    <has_text_matching expression="3R\t190\t200\t1"/>
                 </assert_contents>
             </output>
         </test>
@@ -250,7 +251,7 @@
             <param name="bamFile2" value="testB.bam" ftype="bam"/>
             <param name="advancedOpt|showAdvancedOpt" value="yes"/>
             <param name="outFileFormat" value="bedgraph"/>
-            <param name="binSize" value="10"/>
+            <param name="binSize" value="50"/>
             <param name="comparison|type" value="ratio"/>
             <param name="advancedOpt|skipNAs" value="true"/>
             <output name="outFileName" ftype="bedgraph">

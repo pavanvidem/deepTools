@@ -40,7 +40,6 @@
     </command>
     <inputs>
         <expand macro="multiple_input_bams" MIN="1"/>
-        <expand macro="custom_sample_labels"/>
         <param argument="--histogram" type="boolean" truevalue="--histogram" falsevalue=""
             label="Get the distribution of read/fragment lengths as a histogram"/>
         <expand macro="input_image_file_format"/>

@@ -6,6 +6,7 @@
     <xml name="requirements">
         <requirements>
             <requirement type="package" version="@TOOL_VERSION@">deeptools</requirement>
+            <requirement type="package" version="1.24">samtools</requirement>
         </requirements>
         <expand macro="stdio"/>
         <version_command>@BINARY@ --version</version_command>
@@ -361,12 +362,8 @@
     </xml>
 
     <token name="@MULTISUMMARY_COMMON_PARAMS@">
-        $mode.modeOpt
-
         --outFileName '$outFile'
-        #if $custom_sample_labels_conditional.custom_labels_select == 'Yes'
-            --labels #echo ' '.join($custom_sample_labels_conditional.labels)#
-        #end if
+        --labels #echo " ".join($labels)#
 
         #if $outRawCounts:
             --outRawCounts '$outFileRawCounts'
@@ -422,6 +419,7 @@ is vital to you, select Yes below.">
         </when>
         </conditional>
     </xml>
+
 
     <xml name="custom_sample_labels">
         <conditional name="custom_sample_labels_conditional">

@@ -26,7 +26,6 @@
             #end if
 
             #if $advancedOpt.showAdvancedOpt == "yes":
-              $advancedOpt.no_collapse
               $advancedOpt.skipNAs
               $advancedOpt.fixedStep
               $advancedOpt.skipZeroOverZero
@@ -84,7 +83,6 @@
             <param argument="--binSize" type="integer" value="50" min="1"
                 label="Length, in bases, of the non-overlapping bins used for averaging the score over the regions length"
                 help="Size of the bins in bases for the output of the bigwig/bedgraph file."/>
-            <expand macro="no_collapse"/>
             <expand macro="skipNAs"/>
             <expand macro="skipZeroOverZero"/>
                 <param argument="--fixedStep" type="boolean" truevalue="--fixedStep" falsevalue=""
@@ -115,7 +113,6 @@
             <param name="bigwigFile2" value="test.bw" ftype="bigwig"/>
             <param name="advancedOpt|showAdvancedOpt" value="yes"/>
             <param name="outFileFormat" value="bedgraph"/>
-            <param name="advancedOpt|no_collapse" value="false"/>
             <param name="advancedOpt|binSize" value="10"/>
             <param name="comparison|comparison_select" value="ratio"/>
             <output name="outFileName" file="bigwigCompare_result2.bg" sort="true" ftype="bedgraph"/>
@@ -128,7 +125,7 @@
             <param name="advancedOpt|fixedStep" value="true" />
             <param name="advancedOpt|binSize" value="10"/>
             <param name="comparison|comparison_select" value="ratio"/>
-            <output name="outFileName" file="bigwigCompare_result2.bg" sort="true" ftype="bedgraph"/>
+            <output name="outFileName" file="bigwigCompare_result3.bg" sort="true" ftype="bedgraph"/>
         </test>
         
     </tests>

@@ -12,6 +12,7 @@
 
         @multiple_input_bigwigs@
         @BINARY@
+        $mode.modeOpt
         @THREADS@
         --bwfiles #echo ' '.join($files)#
 

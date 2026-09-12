@@ -12,6 +12,7 @@
 
         @multiple_input_bams@
         @BINARY@
+        $mode.modeOpt
         @THREADS@
         --bamfiles #echo ' '.join($files)#
 

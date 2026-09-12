@@ -173,10 +173,8 @@
             <param name="advancedOpt|skipNAs" value="true"/>
             <output name="outFileName" ftype="bedgraph">
                 <assert_contents>
-                    <has_text_matching expression="3R\t0\t100\t0"/>
-                    <has_text_matching expression="3R\t100\t200\t1"/>
-                    <has_text_matching expression="chr_cigar\t0\t50\t1"/>
-                    <has_text_matching expression="chr_cigar\t50\t200\t0"/>
+                    <has_text_matching expression="3R\t100\t200\t17903410"/>
+                    <has_text_matching expression="chr_cigar\t0\t50\t17903410"/>
                 </assert_contents>
             </output>
         </test>
