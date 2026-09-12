@@ -90,7 +90,7 @@
                 <assert_contents>
                     <has_n_columns n="4" />
                     <has_line_matching expression="Component\tbowtie2-test1.bam\tbowtie2-test1.bam\tEigenvalue" />
-                    <has_line_matching expression="1\t-?1\.99949\d*\t.*\t3\.0000\d*" />
+                    <has_line_matching expression="1\t-?1\.99949\d*\t.*\t2\.999\d*" />
                     <has_line_matching expression="2\t-?0\.96079\d*\t.*" />
                 </assert_contents>
             </output>

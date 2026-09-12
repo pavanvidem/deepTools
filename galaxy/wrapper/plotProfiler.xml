@@ -115,14 +115,14 @@
             <param name="advancedOpt|outFileNameData" value="True" />
             <param name="advancedOpt|startLabel" value="TSS" />
             <param name="advancedOpt|endLabel" value="TES" />
-            <output name="outFileName" file="profiler_result1.png" ftype="png" compare="sim_size" delta="4000" />
+            <output name="outFileName" file="profiler_result1.png" ftype="png" compare="image_diff" eps="0.2" />
             <output name="output_outFileNameData" file="profiler_result1.tabular" ftype="tabular" />
         </test>
         <test expect_num_outputs="1">
             <param name="matrixFile" value="computeMatrix_result2.gz" ftype="deeptools_compute_matrix_archive" />
             <param name="advancedOpt|showAdvancedOpt" value="yes" />
             <param name="advancedOpt|refPointLabel" value="REF" />
-            <output name="outFileName" file="profiler_result2.png" ftype="png" compare="sim_size" delta="4000" />
+            <output name="outFileName" file="profiler_result2.png" ftype="png" compare="image_diff" eps="0.2" />
         </test>
     </tests>
     <help>
